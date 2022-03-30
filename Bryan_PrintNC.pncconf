@@ -1129,8 +1129,8 @@
   <property name="mesa0sserial0_0pin7" type="string" value="min-home-y2"/>
   <property name="mesa0sserial0_0pin7inv" type="bool" value="True"/>
   <property name="mesa0sserial0_0pin7type" type="string" value="GPIO Input"/>
-  <property name="mesa0sserial0_0pin8" type="string" value="estop-ext"/>
-  <property name="mesa0sserial0_0pin8inv" type="bool" value="True"/>
+  <property name="mesa0sserial0_0pin8" type="string" value="unused-input"/>
+  <property name="mesa0sserial0_0pin8inv" type="bool" value="False"/>
   <property name="mesa0sserial0_0pin8type" type="string" value="GPIO Input"/>
   <property name="mesa0sserial0_0pin9" type="string" value="unused-input"/>
   <property name="mesa0sserial0_0pin9inv" type="bool" value="False"/>
