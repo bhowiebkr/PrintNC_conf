@@ -1,2 +1,12 @@
 # Include your custom HAL commands here
 # This file will not be overwritten when you run PNCconf again
+loadusr -Wn vfd hy_vfd -n vfd -d /dev/ttyUSB0 -p none -r 9600
+
+net spindle-cmd-rpm-abs => vfd.speed-command
+net spindle-cw spindle.0.forward => vfd.spindle-forward
+net spindle-ccw spindle.0.reverse => vfd.spindle-reverse
+#net on spindle.0.on => vfd.spindle-on
+
+
+# Remote E-stop
+net estop-loop hm2_7i76e.0.7i76.0.0.input-08-not iocontrol.0.emc-enable-in

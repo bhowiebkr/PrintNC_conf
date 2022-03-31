@@ -339,10 +339,6 @@ net machine-is-enabled        <=  motion.motion-enabled
 
 #  ---digital in / out signals---
 
-#  ---estop signals---
-
-net estop-loop hm2_7i76e.0.7i76.0.0.input-08-not iocontrol.0.emc-enable-in
-
 #  ---manual tool change signals---
 
 loadusr -W hal_manualtoolchange
