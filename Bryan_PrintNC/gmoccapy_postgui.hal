@@ -1,0 +1,5 @@
+#  ---manual tool change signals to gmoccapy's dialog---
+
+net tool-change-request    => gmoccapy.toolchange-change
+net tool-change-confirmed  <= gmoccapy.toolchange-changed
+net tool-number            => gmoccapy.toolchange-number
