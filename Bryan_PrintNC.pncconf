@@ -4432,10 +4432,10 @@
   <property name="zerox" type="bool" value="False"/>
   <property name="zeroy" type="bool" value="False"/>
   <property name="zeroz" type="bool" value="False"/>
-  <property name="zhomefinalvel" type="float" value="33.3333333333"/>
+  <property name="zhomefinalvel" type="float" value="33.3166666667"/>
   <property name="zhomelatchvel" type="float" value="0.5"/>
   <property name="zhomepos" type="float" value="-15.0"/>
-  <property name="zhomesearchvel" type="float" value="13.3333333333"/>
+  <property name="zhomesearchvel" type="float" value="13.3166666667"/>
   <property name="zhomesequence" type="float" value="0.0"/>
   <property name="zhomesw" type="float" value="10.0"/>
   <property name="zhometandemsw" type="float" value="0.0"/>
