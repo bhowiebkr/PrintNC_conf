@@ -1,0 +1,17 @@
+loadusr -Wn vfd hy_vfd -n vfd -d /dev/ttyUSB0 -p none -r 9600
+# Replace ttyUSB0 with the address of your adapter
+
+#unlinkp spindle.0.speed-out
+#unlinkp spindle.0.on
+
+setp vfd.enable 1 # This enables the VFD in the driver
+net spindle-speed spindle.0.speed-out => vfd.speed-command
+net spindle-cw spindle.0.forward => vfd.spindle-forward
+net spindle-ccw spindle.0.reverse => vfd.spindle-reverse
+net spindle-on spindle.0.on => vfd.spindle-on
+net spindle-speed-fb => vfd.spindle-speed-fb
+net spindle-current <= vfd.OutA
+net spindle-comm-ok <= vfd.hycomm-ok
+
+net spindle-at-speed => vfd.spindle-at-speed
+net spindle-at-speed <= spindle.0.at-speed

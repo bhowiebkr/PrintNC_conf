@@ -68,6 +68,6 @@ show_preview_on_offset = False
 use_keyboard_shortcuts = False
 tool_in_spindle = 1
 offset_axis_y = 0.0
-offset_axis_z = 50.0
+offset_axis_z = 0.0
 offset_axis_x = 0.0
 
