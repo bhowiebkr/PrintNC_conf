@@ -2,3 +2,7 @@ Bryan_PrintNC/backups
 Bryan_PrintNC/linuxcnc.var
 Bryan_PrintNC/linuxcnc.var.bak
 Bryan_PrintNC/position.txt
+PrintNC/linuxcnc.var.bak
+PrintNC/linuxcnc.var
+PrintNC/position.txt
+PrintNC/tool.tbl
