@@ -4,3 +4,19 @@
 # External E-Stop
 unlinkp iocontrol.0.emc-enable-in
 net estop-loop hm2_7i76e.0.7i76.0.0.input-08-not iocontrol.0.emc-enable-in
+
+#Spindle
+loadusr -Wn vfd hy_vfd -n vfd -d /dev/rs485_dongle -p none -r 9600
+setp vfd.enable 1 # This enables the VFD in the driver
+unlinkp spindle.0.speed-out
+net spindle-speed spindle.0.speed-out => vfd.speed-command
+net spindle-cw spindle.0.forward => vfd.spindle-forward
+net spindle-ccw spindle.0.reverse => vfd.spindle-reverse
+unlinkp spindle.0.on
+net spindle-on spindle.0.on => vfd.spindle-on
+net spindle-speed-fb => vfd.spindle-speed-fb
+net spindle-current <= vfd.OutA
+net spindle-comm-ok <= vfd.hycomm-ok
+
+net spindle-at-speed => vfd.spindle-at-speed
+net spindle-at-speed <= spindle.0.at-speed
