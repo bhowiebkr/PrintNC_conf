@@ -4465,7 +4465,7 @@
   <property name="zmaxferror" type="float" value="10.0"/>
   <property name="zmaxlim" type="float" value="0.0"/>
   <property name="zmaxoutput" type="float" value="0.0"/>
-  <property name="zmaxvel" type="float" value="16.6666666667"/>
+  <property name="zmaxvel" type="float" value="33.333333333333336"/>
   <property name="zmicrostep" type="float" value="8.0"/>
   <property name="zminferror" type="float" value="1.0"/>
   <property name="zminlim" type="float" value="-125.0"/>
