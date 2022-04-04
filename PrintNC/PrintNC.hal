@@ -6,7 +6,7 @@
 loadrt [KINS]KINEMATICS
 loadrt [EMCMOT]EMCMOT servo_period_nsec=[EMCMOT]SERVO_PERIOD num_joints=[KINS]JOINTS
 loadrt hostmot2
-loadrt hm2_eth board_ip="10.10.10.10" config="num_encoders=1 num_pwmgens=0 num_stepgens=5 sserial_port_0=00xxxx" 
+loadrt hm2_eth board_ip="10.10.10.10" config="num_encoders=1 num_pwmgens=0 num_stepgens=5 sserial_port_0=2xxxx" 
 setp    hm2_7i76e.0.watchdog.timeout_ns 5000000
 loadrt pid names=pid.x,pid.y,pid.y2,pid.z,pid.s
 
@@ -39,6 +39,9 @@ net min-home-y     <=  hm2_7i76e.0.7i76.0.0.input-06-not
 
 # --- MIN-HOME-Y2 ---
 net min-home-y2     <=  hm2_7i76e.0.7i76.0.0.input-07-not
+
+net spindle-coolant     <=  hm2_7i76e.0.7i76.0.0.analogin0
+
 
 #*******************
 #  AXIS X JOINT 0
