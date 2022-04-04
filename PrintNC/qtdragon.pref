@@ -1,6 +1,6 @@
 [DIALOG_GEOMETRY]
 LncMessage-geometry = 910 541 340 118
-ToolChangeDialog-geometry = 910 541 99 29
+ToolChangeDialog-geometry = 910 541 340 124
 
 [DIALOG_OPTIONS]
 EntryDialog_play_sound = True
@@ -18,9 +18,10 @@ RunFromLineDialog_play_sound = True
 RunFromLineDialog_sound_type = READY
 
 [BOOK_KEEPING]
-last_loaded_directory = 
-last_loaded_file = None
+last_loaded_directory = /home/howard/linuxcnc/nc_files/examples
+last_loaded_file = /home/howard/linuxcnc/nc_files/examples/3D_Chips.ngc
 style_QSS_Path = /usr/share/qtvcp/screens/qtdragon_hd/dark_grey.qss
+RecentPath_0 = /home/howard/linuxcnc/nc_files/examples/3D_Chips.ngc
 
 [ORIGINOFFSET_SYSTEM_NAMES]
 __dialogOffsetViewWidget-G54 = User System 1
