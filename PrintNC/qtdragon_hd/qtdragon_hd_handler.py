@@ -413,7 +413,7 @@ class HandlerClass:
     #########################
 
     def update_spindle(self,w,data):
-        self.w.gauge_spindle.update_value(abs(data))
+        self.w.gauge_spindle.update_value(abs(data / 60))
 
     def update_spindle_requested(self,w,data):
         self.w.gauge_spindle.set_setpoint(abs(data))
