@@ -6,3 +6,4 @@ PrintNC/tool.tbl
 PrintNC/halshow.preferences
 PrintNC/autosave.halscope
 *.pyc
+PrintNC/qtdragon_hd/__pycache__/qtdragon_hd_handler.cpython-37.pyc
