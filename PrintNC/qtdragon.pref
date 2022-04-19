@@ -1,5 +1,5 @@
 [DIALOG_GEOMETRY]
-LncMessage-geometry = 910 541 340 118
+LncMessage-geometry = 910 541 318 84
 ToolChangeDialog-geometry = 910 541 340 124
 
 [DIALOG_OPTIONS]
@@ -18,10 +18,10 @@ RunFromLineDialog_play_sound = True
 RunFromLineDialog_sound_type = READY
 
 [BOOK_KEEPING]
-last_loaded_directory = /home/howard/linuxcnc/nc_files/examples
-last_loaded_file = /home/howard/linuxcnc/nc_files/examples/3D_Chips.ngc
+last_loaded_directory = /home/howard/My_CNC
+last_loaded_file = /home/howard/My_CNC/ffff.ngc
 style_QSS_Path = /usr/share/qtvcp/screens/qtdragon_hd/dark_grey.qss
-RecentPath_0 = /home/howard/linuxcnc/nc_files/examples/3D_Chips.ngc
+RecentPath_0 = /home/howard/My_CNC/ffff.ngc
 
 [ORIGINOFFSET_SYSTEM_NAMES]
 __dialogOffsetViewWidget-G54 = User System 1
@@ -49,7 +49,7 @@ desktop_notify = True
 notify_max_msgs = 10
 shutdown_check = True
 sound_player_on = False
-mainwindow_geometry = 0 31 1920 1080
+mainwindow_geometry = -1 7 1920 1080
 
 [MCH_MSG_OPTIONS]
 mchnMsg_play_sound = True
@@ -104,7 +104,7 @@ Eoffset count = 0
 External offsets = False
 Reload program = False
 Reload tool = False
-Use keyboard = False
+Use keyboard = True
 Use tool sensor = False
 Use tool touchplate = False
 Run from line = False

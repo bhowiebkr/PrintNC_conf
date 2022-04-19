@@ -5,13 +5,10 @@
 net spindle-current => qtdragon.spindle-amps
 net spindle-voltage => qtdragon.spindle-volts
 
-# connect spindle revolutions per second to spindle speed in
-#net spindle-vel-fb-rps => spindle.0.speed-in
-
-unlinkp spindle.0.speed-in
-net vfd-speed-in vfd.spindle-speed-fb => spindle.0.speed-in
-
-
 # VFD communication
 #net spindle-comm-ok => qtdragon.spindle-fault
 #net spindle-comm-ok => qtdragon.spindle-modbus-errors # type(u32)
+
+#net spindle-at-speed vfd.spindle-at-speed => qtdragon.led-spindle-at-speed
+
+#

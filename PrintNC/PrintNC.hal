@@ -287,13 +287,7 @@ net spindle-cw                 <=  spindle.0.forward
 net spindle-ccw                <=  spindle.0.reverse
 net spindle-brake              <=  spindle.0.brake
 net spindle-revs               =>  spindle.0.revs
-net spindle-at-speed           =>  spindle.0.at-speed
-net spindle-vel-fb-rps         =>  spindle.0.speed-in
 net spindle-index-enable      <=>  spindle.0.index-enable
-
-# ---Setup spindle at speed signals---
-
-sets spindle-at-speed true
 
 
 #******************************

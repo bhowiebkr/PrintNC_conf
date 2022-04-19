@@ -11,20 +11,18 @@ setp vfd.enable 1 # This enables the VFD in the driver
 
 # Connect Speed
 net spindle-vel-cmd-rpm => vfd.speed-command
+net spindle-speed vfd.spindle-speed-fb => spindle.0.speed-in
+#net spindle-at-speed vfd.spindle-at-speed => spindle.0.at-speed
 
+#led-spindle-at-speed
 
 # Connect forward and reverse
 net spindle-cw spindle.0.forward => vfd.spindle-forward
 net spindle-ccw spindle.0.reverse => vfd.spindle-reverse
 
 # Connect Spindle On
-unlinkp spindle.0.on
-net spindle-on spindle.0.on => vfd.spindle-on
-
+net spindle-enable => vfd.spindle-on
 
 # Current Amps
 net spindle-current <= vfd.OutA
 net spindle-voltage <= vfd.rated-motor-voltage
-
-# Communication
-#net spindle-comm-ok <= vfd.hycomm-ok conv_float_u32
