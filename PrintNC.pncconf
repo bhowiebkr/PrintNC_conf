@@ -4269,7 +4269,7 @@
   <property type="bool" name="xinvertencoder" value="False"/>
   <property type="bool" name="xinvertmotor" value="True"/>
   <property type="int" name="xlatchdir" value="0"/>
-  <property type="float" name="xmaxacc" value="1000.0"/>
+  <property type="float" name="xmaxacc" value="500.0"/>
   <property type="float" name="xmaxferror" value="10.0"/>
   <property type="float" name="xmaxlim" value="900.0"/>
   <property type="float" name="xmaxoutput" value="0.0"/>
@@ -4363,7 +4363,7 @@
   <property type="bool" name="yinvertencoder" value="False"/>
   <property type="bool" name="yinvertmotor" value="True"/>
   <property type="int" name="ylatchdir" value="0"/>
-  <property type="float" name="ymaxacc" value="1000.0"/>
+  <property type="float" name="ymaxacc" value="500.0"/>
   <property type="float" name="ymaxferror" value="10.0"/>
   <property type="float" name="ymaxlim" value="550.0"/>
   <property type="float" name="ymaxoutput" value="0.0"/>
@@ -4461,7 +4461,7 @@
   <property type="bool" name="zinvertencoder" value="False"/>
   <property type="bool" name="zinvertmotor" value="False"/>
   <property type="int" name="zlatchdir" value="0"/>
-  <property type="float" name="zmaxacc" value="500.0"/>
+  <property type="float" name="zmaxacc" value="250.0"/>
   <property type="float" name="zmaxferror" value="10.0"/>
   <property type="float" name="zmaxlim" value="0.0"/>
   <property type="float" name="zmaxoutput" value="0.0"/>
