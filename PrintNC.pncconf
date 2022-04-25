@@ -4103,7 +4103,7 @@
   <property type="int" name="sencodercounts" value="4000"/>
   <property type="int" name="sencoderscale" value="0"/>
   <property type="bool" name="serial_vfd" value="False"/>
-  <property type="float" name="servoperiod" value="1000000.0"/>
+  <property type="float" name="servoperiod" value="2000000.0"/>
   <property type="float" name="sfiltergain" value="1.0"/>
   <property type="bool" name="sharedmpg" value="False"/>
   <property type="int" name="shomefinalvel" value="0"/>
@@ -4269,11 +4269,11 @@
   <property type="bool" name="xinvertencoder" value="False"/>
   <property type="bool" name="xinvertmotor" value="True"/>
   <property type="int" name="xlatchdir" value="0"/>
-  <property type="float" name="xmaxacc" value="500.0"/>
+  <property type="float" name="xmaxacc" value="250.0"/>
   <property type="float" name="xmaxferror" value="10.0"/>
   <property type="float" name="xmaxlim" value="900.0"/>
   <property type="float" name="xmaxoutput" value="0.0"/>
-  <property type="float" name="xmaxvel" value="166.666666667"/>
+  <property type="float" name="xmaxvel" value="83.33333333333333"/>
   <property type="float" name="xmicrostep" value="8.0"/>
   <property type="float" name="xminferror" value="1.0"/>
   <property type="float" name="xminlim" value="0.0"/>
@@ -4363,11 +4363,11 @@
   <property type="bool" name="yinvertencoder" value="False"/>
   <property type="bool" name="yinvertmotor" value="True"/>
   <property type="int" name="ylatchdir" value="0"/>
-  <property type="float" name="ymaxacc" value="500.0"/>
+  <property type="float" name="ymaxacc" value="250.0"/>
   <property type="float" name="ymaxferror" value="10.0"/>
   <property type="float" name="ymaxlim" value="550.0"/>
   <property type="float" name="ymaxoutput" value="0.0"/>
-  <property type="float" name="ymaxvel" value="166.666666667"/>
+  <property type="float" name="ymaxvel" value="83.33333333333333"/>
   <property type="float" name="ymicrostep" value="8.0"/>
   <property type="float" name="yminferror" value="1.0"/>
   <property type="float" name="yminlim" value="0.0"/>
@@ -4461,11 +4461,11 @@
   <property type="bool" name="zinvertencoder" value="False"/>
   <property type="bool" name="zinvertmotor" value="False"/>
   <property type="int" name="zlatchdir" value="0"/>
-  <property type="float" name="zmaxacc" value="250.0"/>
+  <property type="float" name="zmaxacc" value="125.0"/>
   <property type="float" name="zmaxferror" value="10.0"/>
   <property type="float" name="zmaxlim" value="0.0"/>
   <property type="float" name="zmaxoutput" value="0.0"/>
-  <property type="float" name="zmaxvel" value="33.333333333333336"/>
+  <property type="float" name="zmaxvel" value="16.666666666666668"/>
   <property type="float" name="zmicrostep" value="8.0"/>
   <property type="float" name="zminferror" value="1.0"/>
   <property type="float" name="zminlim" value="-125.0"/>
