@@ -3,7 +3,7 @@
 
 # External E-Stop
 unlinkp iocontrol.0.emc-enable-in
-net estop-loop hm2_7i76e.0.7i76.0.0.input-08-not iocontrol.0.emc-enable-in
+net estop-loop hm2_7i76e.0.7i76.0.0.input-08-not => iocontrol.0.emc-enable-in
 
 #Spindle
 loadusr -Wn vfd hy_vfd -n vfd -d /dev/rs485_dongle -p none -r 9600
@@ -13,8 +13,6 @@ setp vfd.enable 1 # This enables the VFD in the driver
 net spindle-vel-cmd-rpm => vfd.speed-command
 net spindle-speed vfd.spindle-speed-fb => spindle.0.speed-in
 #net spindle-at-speed vfd.spindle-at-speed => spindle.0.at-speed
-
-#led-spindle-at-speed
 
 # Connect forward and reverse
 net spindle-cw spindle.0.forward => vfd.spindle-forward
@@ -26,3 +24,7 @@ net spindle-enable => vfd.spindle-on
 # Current Amps
 net spindle-current <= vfd.OutA
 net spindle-voltage <= vfd.rated-motor-voltage
+
+# the probe and the probe estop
+net probe-in <= hm2_7i76e.0.7i76.0.0.input-09-not 
+net probe-in-estop <= hm2_7i76e.0.7i76.0.0.input-10-not
