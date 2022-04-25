@@ -1,6 +1,6 @@
 [DIALOG_GEOMETRY]
 LncMessage-geometry = 910 541 318 84
-ToolChangeDialog-geometry = 910 541 318 205
+ToolChangeDialog-geometry = 910 541 318 98
 
 [DIALOG_OPTIONS]
 EntryDialog_play_sound = True
@@ -18,10 +18,10 @@ RunFromLineDialog_play_sound = True
 RunFromLineDialog_sound_type = READY
 
 [BOOK_KEEPING]
-last_loaded_directory = /home/howard/My_CNC/tram_plate_v1_wood
-last_loaded_file = /home/howard/My_CNC/tram_plate_v1_wood/5_finish_sides.ngc
+last_loaded_directory = /home/howard/My_CNC/face_plate_wood
+last_loaded_file = /home/howard/My_CNC/face_plate_wood/4_face_plate_wood_8mm_endmill.ngc
 style_QSS_Path = /usr/share/qtvcp/screens/qtdragon_hd/dark_grey.qss
-RecentPath_0 = /home/howard/My_CNC/tram_plate_v1_wood/5_finish_sides.ngc
+RecentPath_0 = /home/howard/My_CNC/face_plate_wood/4_face_plate_wood_8mm_endmill.ngc
 
 [ORIGINOFFSET_SYSTEM_NAMES]
 __dialogOffsetViewWidget-G54 = User System 1
