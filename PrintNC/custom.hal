@@ -6,33 +6,29 @@
 #net estop-loop hm2_7i76e.0.7i76.0.0.input-08-not => iocontrol.0.emc-enable-in
 
 
+# initialize the estop array with 2 instances
+loadrt estop_latch count=2
 
-
-# initialize the estop chain with 3 instances
-loadrt estop_latch count=3 # loads a real time HAL component
+# add them both to the servo thread so they do stuff
 addf estop-latch.0 servo-thread
 addf estop-latch.1 servo-thread
-addf estop-latch.2 servo-thread
 
 
-net latch-reset <= iocontrol.0.user-request-enable 
-unlinkp iocontrol.0.user-enable-out
+net latch-reset <= iocontrol.0.user-request-enable
+unlinkp iocontrol.0.user-enable-out # because pncconf
 net latch-ok-in <= iocontrol.0.user-enable-out 
 
 # connect each one in a chain
 net latch-ok-in => estop-latch.0.ok-in
 net latch0-out <= estop-latch.0.ok-out 
 net latch0-out => estop-latch.1.ok-in
-net latch1-out <= estop-latch.1.ok-out 
-net latch1-out  => estop-latch.2.ok-in
 
 # reset the array
 net latch-reset => estop-latch.0.reset
 net latch-reset => estop-latch.1.reset
-net latch-reset => estop-latch.2.reset
 
-unlinkp iocontrol.0.emc-enable-in
-net latch-out iocontrol.0.emc-enable-in <= estop-latch.2.ok-out
+unlinkp iocontrol.0.emc-enable-in # because pncconf
+net latch-out iocontrol.0.emc-enable-in <= estop-latch.1.ok-out
 net estop-out estop-latch.1.fault-out
 
 # External estop control box
