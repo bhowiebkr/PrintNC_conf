@@ -1,6 +1,7 @@
 [DIALOG_GEOMETRY]
-LncMessage-geometry = 910 541 318 84
-ToolChangeDialog-geometry = 910 541 318 98
+LncMessage-geometry = 910 541 340 102
+ToolChangeDialog-geometry = 910 541 340 237
+CalculatorDialog-geometry = 910 512 472 376
 
 [DIALOG_OPTIONS]
 EntryDialog_play_sound = True
@@ -18,10 +19,10 @@ RunFromLineDialog_play_sound = True
 RunFromLineDialog_sound_type = READY
 
 [BOOK_KEEPING]
-last_loaded_directory = /home/howard/My_CNC/face_plate_wood
-last_loaded_file = /home/howard/My_CNC/face_plate_wood/4_face_plate_wood_8mm_endmill.ngc
+last_loaded_directory = /media/howard/face_plate_wood
+last_loaded_file = /media/howard/face_plate_wood/3_face_plate_wood.ngc
 style_QSS_Path = /usr/share/qtvcp/screens/qtdragon_hd/dark_grey.qss
-RecentPath_0 = /home/howard/My_CNC/face_plate_wood/4_face_plate_wood_8mm_endmill.ngc
+RecentPath_0 = /media/howard/face_plate_wood/3_face_plate_wood.ngc
 
 [ORIGINOFFSET_SYSTEM_NAMES]
 __dialogOffsetViewWidget-G54 = User System 1
@@ -87,7 +88,7 @@ gcodegraphics-user-lat = 0.0
 gcodegraphics-user-lon = 0.0
 
 [CUSTOM_FORM_ENTRIES]
-Tool to load = 0
+Tool to load = 4
 Laser X = 100.0
 Laser Y = -20.0
 Sensor X = 10.0
@@ -106,10 +107,28 @@ Reload program = False
 Reload tool = False
 Use keyboard = True
 Use tool sensor = False
-Use tool touchplate = False
-Run from line = False
+Use tool touchplate = True
+Run from line = True
 Use virtual keyboard = False
 Use camera = False
 Use alpha display mode = False
 Inhibit display mouse selection = True
+
+[PROBE OPTIONS]
+Probe tool = 0
+Probe diameter = 4
+Probe rapid = 10
+Probe feed = 10
+Probe search = 10
+Probe max travel = 10
+Probe max z = 2
+Probe extra depth = 0
+Probe step off = 10
+Probe xy clearance = 10
+Probe z clearance = 10
+Probe edge width = 10
+Calibration offset = 0
+Cal x width = 0
+Cal y width = 0
+Cal diameter = 0
 
