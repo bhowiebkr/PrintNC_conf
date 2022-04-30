@@ -5,10 +5,16 @@
 net spindle-current => qtdragon.spindle-amps
 net spindle-voltage => qtdragon.spindle-volts
 
-# VFD communication
-#net spindle-comm-ok => qtdragon.spindle-fault
-#net spindle-comm-ok => qtdragon.spindle-modbus-errors # type(u32)
+# connect the probe in to the led in the GUI
+net probe-in => qtdragon.led-probe
 
-#net spindle-at-speed vfd.spindle-at-speed => qtdragon.led-spindle-at-speed
 
-#
+# Set up Z axis external offsets
+net eoffset_clear    qtdragon.eoffset-clear => axis.z.eoffset-clear
+net eoffset_count    qtdragon.eoffset-count => axis.z.eoffset-counts
+net eoffset          qtdragon.eoffset-value <= axis.z.eoffset
+
+# uncomment for dragon_hd
+net limited          qtdragon.led-limits-tripped <= motion.eoffset-limited
+setp axis.z.eoffset-enable 1
+setp axis.z.eoffset-scale 1.0
