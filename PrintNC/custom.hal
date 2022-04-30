@@ -39,9 +39,6 @@ net external-estop => estop-latch.0.fault-in
 net touch-estop <= hm2_7i76e.0.7i76.0.0.input-10-not
 net touch-estop => estop-latch.1.fault-in
 
-
-
-
 #Spindle
 loadusr -Wn vfd hy_vfd -n vfd -d /dev/rs485_dongle -p none -r 9600
 setp vfd.enable 1 # This enables the VFD in the driver
@@ -63,5 +60,5 @@ net spindle-current <= vfd.OutA
 net spindle-voltage <= vfd.rated-motor-voltage
 
 # the probe and the probe estop
-#net probe-in <= hm2_7i76e.0.7i76.0.0.input-09-not 
-#net probe-in-estop <= hm2_7i76e.0.7i76.0.0.input-10-not
+net probe-in <= hm2_7i76e.0.7i76.0.0.input-09-not 
+
