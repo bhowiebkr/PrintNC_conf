@@ -2,7 +2,6 @@ PrintNC/backups
 PrintNC/linuxcnc.var.bak
 PrintNC/linuxcnc.var
 PrintNC/position.txt
-PrintNC/tool.tbl
 PrintNC/halshow.preferences
 PrintNC/autosave.halscope
 *.pyc
