@@ -88,20 +88,20 @@ gcodegraphics-user-lat = 0.0
 gcodegraphics-user-lon = 0.0
 
 [CUSTOM_FORM_ENTRIES]
-Tool to load = 4
+Tool to load = 0
 Laser X = 100.0
 Laser Y = -20.0
-Sensor X = 10.0
-Sensor Y = 10.0
+Sensor X = 880.4
+Sensor Y = 16.5
 Camera X = 10.0
 Camera Y = 10.0
 Work Height = 20.0
 Touch Height = 40.0
 Sensor Height = 40.0
-Search Velocity = 40.0
-Probe Velocity = 10.0
-Max Probe = 10.0
-Eoffset count = 0
+Search Velocity = 300.0
+Probe Velocity = 5.0
+Max Probe = 80.0
+Eoffset count = 30
 External offsets = False
 Reload program = False
 Reload tool = False
