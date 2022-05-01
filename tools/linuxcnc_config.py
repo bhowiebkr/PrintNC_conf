@@ -9,6 +9,12 @@ class LinuxCNCConfig(object):
         if path:
             self.read(path)
 
+    def get_variables(self, section):
+        return self.data[section]["variables"]
+
+    def sections(self):
+        return self.data.keys()
+
     def read(self, path):
         lines = None
 
@@ -37,7 +43,6 @@ class LinuxCNCConfig(object):
 
                 c = line[1:]
                 c = c.strip()
-                print([c])
                 comment_buffer.append(c)
                 continue
 
@@ -53,7 +58,10 @@ class LinuxCNCConfig(object):
                 key, val = line.split("=", 1)
                 key = key.strip()
                 val = val.strip()
-                self.data[curr_section]["variables"].append([key, val, comment_buffer])
+
+                self.data[curr_section]["variables"].append(
+                    [key, val, " ".join(comment_buffer)]
+                )
                 comment_buffer = []
                 continue
 
