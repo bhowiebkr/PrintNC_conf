@@ -13,17 +13,6 @@ from linuxcnc_config import LinuxCNCConfig
 DEBUG = True
 
 
-class M(dict):
-    def __setitem__(self, key, value):
-        if key in self:
-            items = self[key]
-            new = value[0]
-            if new not in items:
-                items.append(new)
-        else:
-            super(M, self).__setitem__(key, value)
-
-
 class Editor(QWidget):
     def __init__(self, parent=None):
         super(Editor, self).__init__(parent)
@@ -90,6 +79,7 @@ class Editor(QWidget):
 
     def load_config(self):
 
+        # Open the configuration file
         if DEBUG:
             self.config = LinuxCNCConfig(
                 "/home/howard/linuxcnc/configs/PrintNC/PrintNC.ini"
@@ -104,6 +94,10 @@ class Editor(QWidget):
             )
             config_path = dialog[0]
             self.config = LinuxCNCConfig(config_path)
+
+        # Build the GUI
+        # for section in self.config.sections():
+        #    section
 
     def closeEvent(self, event):
         self.settings = QSettings("cnc_editor", "cnc_editor")
