@@ -8,9 +8,12 @@ from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 
 from linuxcnc_config import LinuxCNCConfig
+from linuxcnc_doc_reader import LinuxCNCDocs
 
 
-DEBUG = False
+DEBUG = True
+
+Docs = LinuxCNCDocs()
 
 
 class TableModel(QAbstractTableModel):
@@ -24,6 +27,7 @@ class TableModel(QAbstractTableModel):
 
         self._data = data
         self.section = section
+        self.clean_section = self.section[1:-1].split("_")[0]  # just get the main name
 
     def setHeaderData(self, section, orientation, data, role=Qt.EditRole):
         if orientation == Qt.Horizontal and role in (Qt.DisplayRole, Qt.EditRole):
@@ -43,16 +47,42 @@ class TableModel(QAbstractTableModel):
         return super().headerData(section, orientation, role)
 
     def data(self, index, role):
-        if role == Qt.DisplayRole:
-            return self._data.get_variables(self.section)[index.row()][index.column()]
-        if role == Qt.TextAlignmentRole:
+        if index.isValid():
 
-            if index.column() == 0:
-                return Qt.AlignVCenter | Qt.AlignRight
-            elif index.column() == 1:
-                return Qt.AlignCenter
-            elif index.column() == 2:
-                return Qt.AlignVCenter | Qt.AlignLeft
+            if role == Qt.DisplayRole or role == Qt.EditRole:
+                return self._data.get_variables(self.section)[index.row()][
+                    index.column()
+                ]
+
+            elif role == Qt.TextAlignmentRole:
+                if index.column() == 0:
+                    return Qt.AlignVCenter | Qt.AlignRight
+                elif index.column() == 1:
+                    return Qt.AlignCenter
+                elif index.column() == 2:
+                    return Qt.AlignVCenter | Qt.AlignLeft
+
+            elif role == Qt.ToolTipRole:
+                variable = self._data.get_variables(self.section)[index.row()][0]
+                tip = Docs.get_variable_docs(self.clean_section, variable)
+                return tip
+
+    def setData(self, index, value, role):
+        if role == Qt.EditRole:
+            variable = self._data.get_variables(self.section)[index.row()][
+                index.column() - 1
+            ]
+            self._data.edit_variable(self.section, variable, value)
+            return True
+        # elif role == Qt.ToolTipRole:
+        #     variable = self._data.get_variables(self.section)[index.row()][
+        #         index.column() - 1
+        #     ]
+        #     tip = Docs.get_variable_docs(self.section, variable)
+        #     return tip
+
+    def flags(self, index):
+        return Qt.ItemIsSelectable | Qt.ItemIsEnabled | Qt.ItemIsEditable
 
     def rowCount(self, index):
         return len(self._data.get_variables(self.section))
@@ -74,6 +104,9 @@ class SectionTab(QWidget):
         self.setLayout(main_layout)
 
         # Widgets
+        clean_name = self.name[1:-1].split("_")[0]  # just get the main name
+        self.description = QLabel(Docs.get_section_doc(section=clean_name))
+        self.description.setWordWrap(True)
         self.table = QTableView()
         self.table.setModel(self.model)
         self.table.verticalHeader().setVisible(False)
@@ -83,6 +116,7 @@ class SectionTab(QWidget):
         self.table.horizontalHeader().setStretchLastSection(True)
 
         # add widgets
+        main_layout.addWidget(self.description)
         main_layout.addWidget(self.table)
 
         # self.load_values()
@@ -212,49 +246,8 @@ class Editor(QWidget):
         QWidget.closeEvent(self, event)
 
 
-palette = QPalette()
-palette.setColor(QPalette.Window, QColor(27, 35, 38))
-palette.setColor(QPalette.WindowText, QColor(234, 234, 234))
-palette.setColor(QPalette.Base, QColor(27, 35, 38))
-palette.setColor(QPalette.Disabled, QPalette.Base, QColor(27 + 5, 35 + 5, 38 + 5))
-palette.setColor(QPalette.AlternateBase, QColor(12, 15, 16))
-palette.setColor(QPalette.ToolTipBase, QColor(27, 35, 38))
-palette.setColor(QPalette.ToolTipText, Qt.white)
-palette.setColor(QPalette.Text, QColor(200, 200, 200))
-palette.setColor(QPalette.Disabled, QPalette.Text, QColor(100, 100, 100))
-palette.setColor(QPalette.Button, QColor(27, 35, 38))
-palette.setColor(QPalette.ButtonText, Qt.white)
-palette.setColor(QPalette.BrightText, QColor(100, 215, 222))
-palette.setColor(QPalette.Link, QColor(126, 71, 130))
-palette.setColor(QPalette.Highlight, QColor(126, 71, 130))
-palette.setColor(QPalette.HighlightedText, Qt.white)
-palette.setColor(QPalette.Disabled, QPalette.Light, Qt.black)
-palette.setColor(QPalette.Disabled, QPalette.Shadow, QColor(12, 15, 16))
-
-dark_palette = QPalette()
-dark_palette.setColor(QPalette.Window, QColor(53, 53, 53))
-dark_palette.setColor(QPalette.WindowText, Qt.white)
-dark_palette.setColor(QPalette.Base, QColor(35, 35, 35))
-dark_palette.setColor(QPalette.AlternateBase, QColor(53, 53, 53))
-dark_palette.setColor(QPalette.ToolTipBase, QColor(25, 25, 25))
-dark_palette.setColor(QPalette.ToolTipText, Qt.white)
-dark_palette.setColor(QPalette.Text, Qt.white)
-dark_palette.setColor(QPalette.Button, QColor(53, 53, 53))
-dark_palette.setColor(QPalette.ButtonText, Qt.white)
-dark_palette.setColor(QPalette.BrightText, Qt.red)
-dark_palette.setColor(QPalette.Link, QColor(42, 130, 218))
-dark_palette.setColor(QPalette.Highlight, QColor(42, 130, 218))
-dark_palette.setColor(QPalette.HighlightedText, QColor(35, 35, 35))
-dark_palette.setColor(QPalette.Active, QPalette.Button, QColor(53, 53, 53))
-dark_palette.setColor(QPalette.Disabled, QPalette.ButtonText, Qt.darkGray)
-dark_palette.setColor(QPalette.Disabled, QPalette.WindowText, Qt.darkGray)
-dark_palette.setColor(QPalette.Disabled, QPalette.Text, Qt.darkGray)
-dark_palette.setColor(QPalette.Disabled, QPalette.Light, QColor(53, 53, 53))
-
-
 def main():
     app = QApplication(sys.argv)
-    app.setPalette(dark_palette)
     editor = Editor()
     editor.show()
     sys.exit(app.exec_())
