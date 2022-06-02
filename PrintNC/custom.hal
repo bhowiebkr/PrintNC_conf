@@ -1,5 +1,5 @@
 # initialize the estop array with 4 instances
-loadrt estop_latch count=4
+loadrt estop_latch count=5
 
 # add them both to the servo thread so they do stuff. If you don't add them, linuxcnc still works but the 
 # latch doesn't and you are wasting hours wondering why.addf estop-latch.0 servo-thread
@@ -7,6 +7,7 @@ addf estop-latch.0 servo-thread
 addf estop-latch.1 servo-thread
 addf estop-latch.2 servo-thread
 addf estop-latch.3 servo-thread
+addf estop-latch.4 servo-thread
 
 # Get the software estop and connect it to the first latch in the array
 unlinkp iocontrol.0.user-enable-out # because pncconf
@@ -16,6 +17,7 @@ net latch-ok-in iocontrol.0.user-enable-out => estop-latch.0.ok-in
 net estop-latch0-out estop-latch.0.ok-out => estop-latch.1.ok-in
 net estop-latch1-out estop-latch.1.ok-out => estop-latch.2.ok-in
 net estop-latch2-out estop-latch.2.ok-out => estop-latch.3.ok-in
+net estop-latch3-out estop-latch.3.ok-out => estop-latch.4.ok-in
 
 # reset the array from the UI from above
 net latch-reset <= iocontrol.0.user-request-enable
@@ -23,18 +25,19 @@ net latch-reset => estop-latch.0.reset
 net latch-reset => estop-latch.1.reset
 net latch-reset => estop-latch.2.reset
 net latch-reset => estop-latch.3.reset
+net latch-reset => estop-latch.4.reset
 
 # The last fault out in the estop-latch array goes to the estop-out signal
 unlinkp iocontrol.0.emc-enable-in # because pncconf
-net latch-out iocontrol.0.emc-enable-in <= estop-latch.3.ok-out # this enables the UI to work if the last latch is "ok-out"
-net estop-out <= estop-latch.3.fault-out
+net latch-out iocontrol.0.emc-enable-in <= estop-latch.4.ok-out # this enables the UI to work if the last latch is "ok-out"
+net estop-out <= estop-latch.4.fault-out
 
 # connect the external alarms and estops to the estop latch
 net external-estop hm2_7i76e.0.7i76.0.0.input-08 => estop-latch.0.fault-in # external estop
-net servo-x-estop hm2_7i76e.0.7i76.0.0.input-16 => estop-latch.1.fault-in
+net servo-x-estop  hm2_7i76e.0.7i76.0.0.input-16 => estop-latch.1.fault-in
 net servo-yl-estop hm2_7i76e.0.7i76.0.0.input-18 => estop-latch.2.fault-in
 net servo-yr-estop hm2_7i76e.0.7i76.0.0.input-19 => estop-latch.3.fault-in
-
+net servo-z-estop  hm2_7i76e.0.7i76.0.0.input-17 => estop-latch.4.fault-in
 
 #Spindle
 loadusr -Wn vfd hy_vfd -n vfd -d /dev/rs485_dongle -p none -r 9600
