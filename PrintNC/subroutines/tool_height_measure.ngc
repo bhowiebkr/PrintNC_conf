@@ -1,0 +1,66 @@
+o<tool_height_measure> sub
+
+#<probe_search_dist> = -60    (max probe search distance)
+
+#<change_pos_x> = 0     (Tool change X position)
+#<change_pos_y> = 200   (Tool change Y position)
+
+#<height_sensor_x> = 880.4      (Tool height sensor start location X)
+#<height_sensor_y> = 16.5       (Tool height sensor start location Y)
+
+#<safe_height_z> = -5   (the height for when changing the tool and probing)
+
+#<orig_coord>=#<_coord_system> (Store current coordinate system)
+
+o500 if [#<_current_tool> EQ #<_selected_tool>] (The tool is already loaded. Loaded tools should have the Z set correctly)
+o500 else 
+M5 (stop the spindle)
+G54
+G90 G0 (Absolute positioning, fast move)
+
+; Goto the position where we change the tool
+G53 Z#<safe_height_z>                    (Change Z Position first to not hight anything)
+G53 X#<change_pos_x> Y#<change_pos_y>  	(Change XY Position)
+M6 T#<_selected_tool>                   (stop the spindle and prompt the user to change the tool)
+
+; Goto tool height sensor position
+G53 Z#<safe_height_z>	   	 (Goto tool height sensor Z)
+G53 X#<height_sensor_x> Y#<height_sensor_y>  	 (Goto tool height sensor X and Y)
+
+; probe the tool height
+G43.1 Z0	(Reset the tool length in Z)
+G91         (Change to incremental distance mode)
+
+G38.2 Z#<probe_search_dist>  F500   	 (rough probe: down <probe_search_dist>, speed 500, stop on contact)
+G1    Z1.0  F500   	                     (move up 1mm)
+G38.2 Z-10  F25                      	 (fine probe: down max of 10mm, speed 25, stop on contact)
+
+; Calculate the offset TODO check this and simplify if possible
+#<new_val> = [#5063+#5223] ([Probe contact]+ [G54 Z value])
+#<difference> = [#<new_val> - #<diff_val> + #<old_val>]
+#<diff_val> = #<new_val> (we store it for later)
+#<old_val> = #<difference> (store it)
+
+G1 Z5.0 F500    (Move off the touch sensor 5mm)
+G90 G0          (change to absolute positioning, fast move)
+
+G43.1 Z#<difference>      (set the new tool Z value)
+G53 Z#<safe_height_z>	  (Goto Safe Z position)
+
+; Return to the original coordinate system
+G54
+o100 endif
+o101 if[#<orig_coord> EQ 550]
+G55
+o101 endif
+o102 if[#<orig_coord> EQ 560]
+G56
+o102 endif
+o103 if[#<orig_coord> EQ 570]
+G57
+o103 endif
+o104 if[#<orig_coord> EQ 580]
+G58
+o104 endif
+
+o500 endif
