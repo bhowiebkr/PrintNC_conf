@@ -16,7 +16,7 @@ o500 if [#<_current_tool> EQ #<_selected_tool>] (The tool is already loaded. Loa
 o500 else 
 M5 (stop the spindle)
 G54
-G90 G0 (Absolute positioning, fast move)
+G90 G1 (Absolute positioning, fast move)
 
 ; Goto the position where we change the tool
 G53 Z#<safe_height_z>                   (Change Z Position first to not hight anything)
@@ -42,7 +42,7 @@ G38.2 Z-10  F25                       (fine probe: down max of 10mm, speed 25, s
 #<old_val> = #<difference> (store it)
 
 G1 Z5.0 F500    (Move off the touch sensor 5mm)
-G90 G0          (change to absolute positioning, fast move)
+G90 G1          (change to absolute positioning, fast move)
 
 G43.1 Z#<difference>      (set the new tool Z value)
 G53 Z#<safe_height_z>	  (Goto Safe Z position)
@@ -64,3 +64,6 @@ G58
 o104 endif
 
 o500 endif
+
+o<messen> endsub
+M2
