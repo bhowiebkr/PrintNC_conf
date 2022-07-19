@@ -1,6 +1,6 @@
 # initialize the estop array with 4 instances
 loadrt estop_latch count=6
-loadrt near
+#loadrt near
 
 
 # add them both to the servo thread so they do stuff. If you don't add them, linuxcnc still works but the 
@@ -11,7 +11,7 @@ addf estop-latch.2 servo-thread
 addf estop-latch.3 servo-thread
 addf estop-latch.4 servo-thread
 addf estop-latch.5 servo-thread
-addf near.0 servo-thread
+#addf near.0 servo-thread
 
 # Get the software estop and connect it to the first latch in the array
 unlinkp iocontrol.0.user-enable-out # because pncconf
@@ -70,3 +70,11 @@ net spindle-voltage <= vfd.rated-motor-voltage
 # the probe and the probe estop
 net probe-in <= hm2_7i76e.0.7i76.0.0.input-09-not 
 
+# connect one input to the commanded spindle speed
+#net spindle-cmd => near.0.in1
+
+# connect one input to the encoder-measured spindle speed
+#net spindle-speed => near.0.in2
+
+# connect the vfd spindle at speed to simple 0 at speed (at speed is true when the spindle has rampped up to the correct speed)
+net spindle-at-speed spindle.0.at-speed <= vfd.spindle-at-speed
