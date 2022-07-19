@@ -2,6 +2,8 @@
 LncMessage-geometry = 910 541 340 102
 ToolChangeDialog-geometry = 910 541 340 237
 CalculatorDialog-geometry = 910 512 472 376
+RunFromLineDialog-geometry = 795 416 340 222
+_CALCULATOR = 910 512 472 376
 
 [DIALOG_OPTIONS]
 EntryDialog_play_sound = True
@@ -19,10 +21,10 @@ RunFromLineDialog_play_sound = True
 RunFromLineDialog_sound_type = READY
 
 [BOOK_KEEPING]
-last_loaded_directory = /media/howard/face_plate_wood
-last_loaded_file = /media/howard/face_plate_wood/3_face_plate_wood.ngc
+last_loaded_directory = /media/howard/GCODE
+last_loaded_file = /media/howard/GCODE/Ryan test.ngc
 style_QSS_Path = /usr/share/qtvcp/screens/qtdragon_hd/dark_grey.qss
-RecentPath_0 = /media/howard/face_plate_wood/3_face_plate_wood.ngc
+RecentPath_0 = /media/howard/GCODE/tool_change_test.ngc
 
 [ORIGINOFFSET_SYSTEM_NAMES]
 __dialogOffsetViewWidget-G54 = User System 1
@@ -50,7 +52,7 @@ desktop_notify = True
 notify_max_msgs = 10
 shutdown_check = True
 sound_player_on = False
-mainwindow_geometry = -2 -5 1920 1080
+mainwindow_geometry = 0 0 1920 1080
 
 [MCH_MSG_OPTIONS]
 mchnMsg_play_sound = True
@@ -99,19 +101,19 @@ Work Height = 20.0
 Touch Height = 40.0
 Sensor Height = 40.0
 Search Velocity = 300.0
-Probe Velocity = 5.0
+Probe Velocity = 10.0
 Max Probe = 80.0
 Eoffset count = 30
 External offsets = False
 Reload program = False
 Reload tool = False
 Use keyboard = True
-Use tool sensor = False
+Use tool sensor = True
 Use tool touchplate = True
 Run from line = True
 Use virtual keyboard = False
 Use camera = False
-Use alpha display mode = False
+Use alpha display mode = True
 Inhibit display mouse selection = True
 
 [PROBE OPTIONS]
@@ -131,4 +133,22 @@ Calibration offset = 0
 Cal x width = 0
 Cal y width = 0
 Cal diameter = 0
+
+[VERSA_PROBE_OPTIONS]
+ps_searchvel = 300.0
+ps_probevel = 10.0
+ps_z_clearance = 3.0
+ps_probe_max = 1.0
+ps_probe_latch = 0.5
+ps_probe_diam = 2.0
+ps_xy_clearance = 5.0
+ps_side_edge_length = 5.0
+ps_probe_height = 70.0
+ps_block_height = 20.0
+use_tool_measurement = True
+ps_offs_x = 0.0
+ps_offs_y = 0.0
+ps_offs_z = 0.0
+ps_offs_angle = 0.0
+ps_probe_rapid_vel = 60.0
 

@@ -4247,8 +4247,8 @@
   <property name="xcompfilename" type="string" value="xcompensation"/>
   <property name="xcomptype" type="int" value="0"/>
   <property name="xdeadband" type="float" value="0.0"/>
-  <property name="xdirhold" type="float" value="10000.0"/>
-  <property name="xdirsetup" type="float" value="10000.0"/>
+  <property name="xdirhold" type="float" value="1000.0"/>
+  <property name="xdirsetup" type="float" value="1000.0"/>
   <property name="xdrivertype" type="string" value="custom"/>
   <property name="xencoder_leadscrew" type="float" value="5.0"/>
   <property name="xencoder_leadscrew_tpi" type="float" value="5.0"/>
@@ -4289,8 +4289,8 @@
   <property name="xsearchdir" type="int" value="0"/>
   <property name="xsteprev" type="float" value="1000.0"/>
   <property name="xstepscale" type="float" value="100.0"/>
-  <property name="xstepspace" type="float" value="5000.0"/>
-  <property name="xsteptime" type="float" value="5000.0"/>
+  <property name="xstepspace" type="float" value="500.0"/>
+  <property name="xsteptime" type="float" value="500.0"/>
   <property name="xusebacklash" type="bool" value="True"/>
   <property name="xusecomp" type="bool" value="False"/>
   <property name="xusehomeindex" type="int" value="0"/>
@@ -4341,8 +4341,8 @@
   <property name="ycompfilename" type="string" value="ycompensation"/>
   <property name="ycomptype" type="int" value="0"/>
   <property name="ydeadband" type="float" value="0.0"/>
-  <property name="ydirhold" type="float" value="10000.0"/>
-  <property name="ydirsetup" type="float" value="10000.0"/>
+  <property name="ydirhold" type="float" value="1000.0"/>
+  <property name="ydirsetup" type="float" value="1000.0"/>
   <property name="ydrivertype" type="string" value="custom"/>
   <property name="yencoder_leadscrew" type="float" value="5.0"/>
   <property name="yencoder_leadscrew_tpi" type="float" value="5.0"/>
@@ -4383,8 +4383,8 @@
   <property name="ysearchdir" type="int" value="0"/>
   <property name="ysteprev" type="float" value="1000.0"/>
   <property name="ystepscale" type="float" value="100.0"/>
-  <property name="ystepspace" type="float" value="5000.0"/>
-  <property name="ysteptime" type="float" value="5000.0"/>
+  <property name="ystepspace" type="float" value="500.0"/>
+  <property name="ysteptime" type="float" value="500.0"/>
   <property name="yusebacklash" type="bool" value="True"/>
   <property name="yusecomp" type="bool" value="False"/>
   <property name="yusehomeindex" type="int" value="0"/>
@@ -4435,8 +4435,8 @@
   <property name="zcompfilename" type="string" value="zcompensation"/>
   <property name="zcomptype" type="int" value="0"/>
   <property name="zdeadband" type="float" value="0.0"/>
-  <property name="zdirhold" type="float" value="10000.0"/>
-  <property name="zdirsetup" type="float" value="10000.0"/>
+  <property name="zdirhold" type="float" value="1000.0"/>
+  <property name="zdirsetup" type="float" value="1000.0"/>
   <property name="zdrivertype" type="string" value="custom"/>
   <property name="zencoder_leadscrew" type="float" value="5.0"/>
   <property name="zencoder_leadscrew_tpi" type="float" value="5.0"/>
@@ -4481,8 +4481,8 @@
   <property name="zsearchdir" type="int" value="1"/>
   <property name="zsteprev" type="float" value="1000.0"/>
   <property name="zstepscale" type="float" value="250.0"/>
-  <property name="zstepspace" type="float" value="5000.0"/>
-  <property name="zsteptime" type="float" value="5000.0"/>
+  <property name="zstepspace" type="float" value="500.0"/>
+  <property name="zsteptime" type="float" value="500.0"/>
   <property name="zusebacklash" type="bool" value="True"/>
   <property name="zusecomp" type="bool" value="False"/>
   <property name="zusehomeindex" type="int" value="0"/>
