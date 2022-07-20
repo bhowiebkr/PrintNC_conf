@@ -69,7 +69,9 @@ net spindle-voltage <= vfd.rated-motor-voltage
 
 # the probe and the probe estop
 # see: https://linuxcnc.org/docs/html/gcode/g-code.html#gcode:g38
-net probe-in <= hm2_7i76e.0.7i76.0.0.input-09-not 
+net probe-in motion.probe-input <= hm2_7i76e.0.7i76.0.0.input-09-not 
+
+#net motion.probe-input <= probe-in
 
 # connect one input to the commanded spindle speed
 #net spindle-cmd => near.0.in1
