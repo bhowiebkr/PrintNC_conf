@@ -1,52 +1,49 @@
 o<tool_height_measure> sub
 
-#<probe_search_dist> = -60    (max probe search distance)
-
-#<change_pos_x> = 350     (Tool change X position)
-#<change_pos_y> = 10   (Tool change Y position)
-
-#<height_sensor_x> = 880.4      (Tool height sensor start location X)
-#<height_sensor_y> = 16.5       (Tool height sensor start location Y)
-
-#<safe_height_z> = -5   (the height for when changing the tool and probing)
-
+#<change_pos_x> = #<_ini[MANUAL_TOOL_CHANGE]CHANGE_POS_X>
+#<change_pos_y> = #<_ini[MANUAL_TOOL_CHANGE]CHANGE_POS_Y>
+#<z_safe> = #<_ini[MANUAL_TOOL_CHANGE]SAFE_Z_HEIGHT>
+#<touch_sensor_x> = #<_ini[MANUAL_TOOL_CHANGE]TOUCH_SENSOR_POS_X>
+#<touch_sensor_y> = #<_ini[MANUAL_TOOL_CHANGE]TOUCH_SENSOR_POS_Y>
+#<probe_search_dist> = #<_ini[MANUAL_TOOL_CHANGE]PROBE_SEARCH_DIST>
+#<probe_rough> = #<_ini[MANUAL_TOOL_CHANGE]ROUGH_PROBE_SPEED>
+#<probe_fine> = #<_ini[MANUAL_TOOL_CHANGE]FINE_PROBE_SPEED>
+#<touch_off_dist> = #<_ini[MANUAL_TOOL_CHANGE]TOUCH_OFF_DIST>
 #<orig_coord>=#<_coord_system> (Store current coordinate system)
-
+#<spindle_zero_height> = -81.880
 o500 if [#<_current_tool> EQ #<_selected_tool>] (The tool is already loaded. Loaded tools should have the Z set correctly)
 o500 else 
-M5 (stop the spindle)
+M5
 G54
-G90 G0 (Absolute positioning, fast move)
+G90 G0
 
 ; Goto the position where we change the tool
-G53 Z#<safe_height_z>                   (Change Z Position first to not hight anything)
-G53 X#<change_pos_x> Y#<change_pos_y>  	(Change XY Position)
-M6 T#<_selected_tool>                   (stop the spindle and prompt the user to change the tool)
+G53 Z#<z_safe> (so we don't hit anything)
+G53 X#<change_pos_x> Y#<change_pos_y>
+M6 T#<_selected_tool>
 
 ; Goto tool height sensor position
-G53 Z#<safe_height_z>	   	                   (Goto tool height sensor Z)
-G53 X#<height_sensor_x> Y#<height_sensor_y>    (Goto tool height sensor X and Y)
+G53 X#<touch_sensor_x> Y#<touch_sensor_y>
 
 ; probe the tool height
-G43.1 Z0	(Reset the tool length in Z)
-G91         (Change to incremental distance mode)
+G43.1 Z0 (TLC reset)
+G91
+G38.2 Z#<probe_search_dist>  F#<probe_rough> (Rough)
+(debug, Rough probe value: #5063)
+G1    Z0.5  F#<probe_rough> (move off 1mm)
+G38.2 Z-10  F#<probe_fine> (Fine)
+(debug, Fine probe value: #5063)
+(debug, G54-Z: #5223)
 
-G38.2 Z#<probe_search_dist>  F500     (rough probe: down <probe_search_dist>, speed 500, stop on contact)
-G1    Z1.0  F500   	                  (move up 1mm)
-G38.2 Z-10  F25                       (fine probe: down max of 10mm, speed 25, stop on contact)
+; Calculate the tool length offset
+#<TLO> = [ABS[#<spindle_zero_height>] + #5063]
+(debug, Probe touch at: #5223)
+(debug, Tool length offset: #<TLO>)
 
-; Calculate the offset TODO check this and simplify if possible
-#2000=[#5063+#5223]	 (diff = probe contact +  G54 Z)
-#2001=[#2000-#2002+#2003](offset = diff - old contact point + old offset)  
-#2002=[#2000]      	 (Store old contact point)
-#2003=[#2001]	   	 (Store old offset)
-
+G10 L1 P #5400 Z [#<TLO>]  (5400 = tool number)
 G1 Z5.0 F500    (Move off the touch sensor 5mm)
 G90 G0          (change to absolute positioning, fast move)
-
-;G43.1 Z#<difference>      (set the new tool Z value)
-G43.1 Z#2001
-G53 Z#<safe_height_z>	  (Goto Safe Z position)
+G53 Z#<z_safe>	  (Goto Safe Z position)
 
 ; Return to the original coordinate system
 o100 if[#1900 EQ 540]
