@@ -1,6 +1,3 @@
-# printnc_mesa_config
+# Howard's PrintNC configuration
 
-These are my PrintNC config files with hardare:
-
-- Mesa 7i76e
-- Slightly smaller than a standard build
+Hello, these are my PrintNC CNC machine config settings. I'm using QT Dragon HD with a Mesa 7i76e and a tool height sensor. 
