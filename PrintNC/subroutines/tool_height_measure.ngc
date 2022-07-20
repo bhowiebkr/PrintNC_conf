@@ -36,15 +36,10 @@ G1    Z1.0  F500   	                  (move up 1mm)
 G38.2 Z-10  F25                       (fine probe: down max of 10mm, speed 25, stop on contact)
 
 ; Calculate the offset TODO check this and simplify if possible
-;#<new_val> = [#5063+#5223] ([Probe contact]+ [G54 Z value])
-;#<difference> = [#<new_val> - #<diff_val> + #<old_val>]
-;#<diff_val> = #<new_val> (we store it for later)
-;#<old_val> = #<difference> (store it)
-
-#2000=[#5063+#5223]	 (Tastpunkt+NP Verschiebung)
-#2001=[#2000-#2002+#2003](Neu - diff + alt)  
-#2002=[#2000]      	 (Tastpunkt alt merken)
-#2003=[#2001]	   	 (Offset alt merken)
+#2000=[#5063+#5223]	 (diff = probe contact +  G54 Z)
+#2001=[#2000-#2002+#2003](offset = diff - old contact point + old offset)  
+#2002=[#2000]      	 (Store old contact point)
+#2003=[#2001]	   	 (Store old offset)
 
 G1 Z5.0 F500    (Move off the touch sensor 5mm)
 G90 G0          (change to absolute positioning, fast move)
