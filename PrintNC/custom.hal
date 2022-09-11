@@ -1,5 +1,7 @@
 # initialize the estop array with 4 instances
 loadrt estop_latch count=6
+loadrt debounce cfg=1
+
 #loadrt near
 
 
@@ -12,6 +14,8 @@ addf estop-latch.3 servo-thread
 addf estop-latch.4 servo-thread
 addf estop-latch.5 servo-thread
 #addf near.0 servo-thread
+addf debounce.0 servo-thread
+setp debounce.0.delay 100
 
 # Get the software estop and connect it to the first latch in the array
 unlinkp iocontrol.0.user-enable-out # because pncconf
@@ -69,15 +73,14 @@ net spindle-voltage <= vfd.rated-motor-voltage
 
 # the probe and the probe estop
 # see: https://linuxcnc.org/docs/html/gcode/g-code.html#gcode:g38
+
+
+# Debounce the probe
+#net probe_raw <= hm2_7i76e.0.7i76.0.0.input-09-not
+#net probe_raw => debounce.0.0.in
+#net probe-in motion.probe-input <= debounce.0.0.out
+
 net probe-in motion.probe-input <= hm2_7i76e.0.7i76.0.0.input-09-not 
-
-#net motion.probe-input <= probe-in
-
-# connect one input to the commanded spindle speed
-#net spindle-cmd => near.0.in1
-
-# connect one input to the encoder-measured spindle speed
-#net spindle-speed => near.0.in2
 
 # connect the vfd spindle at speed to simple 0 at speed (at speed is true when the spindle has rampped up to the correct speed)
 net spindle-at-speed spindle.0.at-speed <= vfd.spindle-at-speed
