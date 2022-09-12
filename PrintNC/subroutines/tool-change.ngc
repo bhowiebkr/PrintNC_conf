@@ -3,13 +3,12 @@ O<tool-change> SUB
 
 ( Filename: tool-change.ngc )
 ( LinuxCNC Manual Tool-Change Subroutines for Milling Machines version 1.1: subroutine 1/2 )
-(  BEFORE USING CHANGE "CONFIGURATION PARAMETERS" BELOW FOR YOUR MACHINE! )
-
+( BEFORE USING CHANGE "CONFIGURATION PARAMETERS" BELOW FOR YOUR MACHINE! )
 (  )
 
 ( In the LinuxCNC .ini config file, under the [RS274NGC] section add: )
 (    # change/add/use SUBROUTINE_PATH to point to the location where these tool-change subroutines are located: )
-(    SUBROUTINE_PATH = /home/linuxcnc/linuxcnc/nc_files )
+(    SUBROUTINE_PATH = macros )
 (    REMAP=M6    modalgroup=6 ngc=tool-change )
 (    REMAP=M600  modalgroup=6 ngc=tool-job-begin )
 
@@ -21,18 +20,43 @@ O<tool-change> SUB
 
 ( In the LinuxCNC .hal config file, map some input pin to be the probe input, e.g.: )
 (    net probe-z parport.0.pin-12-in => motion.probe-input )
+( For multiple probe inputs, the following can be used, in this case a MESA 7i96 is controlling a NO probe, and a NC Toolsetter )
+( net probe-in <= hm2_7i96.0.gpio.005.in )
+( net length-in <= hm2_7i96.0.gpio.009.in_not )
+( net probe-in => or2.0.in0 )
+( net length-in => or2.0.in1 )
+( net probe-or-length <= or2.0.out => motion.probe-input )
+( The following tool change pins are required as well; )
+( loadusr -W hal_manualtoolchange )
+( net tool-change iocontrol.0.tool-change => hal_manualtoolchange.change )
+( net tool-changed iocontrol.0.tool-changed <= hal_manualtoolchange.changed )
+( net tool-number iocontrol.0.tool-prep-number => hal_manualtoolchange.number )
+( net tool-prepare-loopback iocontrol.0.tool-prepare => iocontrol.0.tool-prepared )
 
-(  )
+( In your Linuxcnc.var file, ensure you have the following variables #5061, #5062, #5063 )
+( They can be manually added and assigned a 0.000 to start )
+
+( In addition I have had to modify the post-processor for the following; )
+( Eliminate G43 call outs after tool changes )
+( Use G53 instead of G28, typically just a check box when post processing )
+( Set machine home for Z in F360 machine setup to be -.250, my machine Zero is at top of travel )
 
 ( Usage: M6 in the g-code will invoke a manual tool change with automatic tool height adjustment. )
 (        M600 is used at the beginning of the first g-code file of a job so that the next M6 will measure the tool for reference )
 (             instead of caluculating a tool length offset. It can also be invoked manually through the MDI before a job starts. )
 
+( My sequence of Running; )
+( 1. Use a T99, a .250" Rod, to touch off X, Y, and Z of WCS as modeled in CAM )
+( 2. Manually input M600 )
+( 3. Manually call an M6 T99, tool will touch off on toolsetter and store tool height )
+( 4. Load program and run, M6 in program will prompt tool change, after changing, tool will touch off and Z will adjust )
+( 5. Run any and all code using the same desired Z height for the WCS as designed )
+( 6. For new WCS repeat from Step #1 )
 (  )
 
-( General theory of operation: touches each tool off to the tool height sensor. The first tool is used as the reference, all )
-(     subsequent tools adjust the tool offset. The tip of the tool is always placed back at the position it started in before )
-(     any of the subroutines are called. It is moved away by raising Z to _TravelZ before moving towards the switch, and when )
+( General theory of operation: touches each tool off to the tool height sensor. The first tool is used as the reference, all   )
+(     subsequent tools adjust the tool offset.                                                                                 )
+(     It is moved away by raising Z to _TravelZ before moving towards the switch, and when                                     )
 (     moving back from the switch again moves at height _TravelZ before going straight back down to the original position. Set )
 (     all necessary modes to ensure correct operation no matter what state the program is in when this is called. We eliminate )
 (     almost all side effects by saving and restoring the modal state. )
@@ -43,7 +67,7 @@ O<tool-change> SUB
 (------------------------------- CONFIGURATION PARAMETERS ----------------------------------------------)
 #<_UseInches> =           0     ( set to 1 to use inches here, or 0 to use millimeters; should match units on tool.tbl dimensions )
 #<_TravelZ> =          -1     ( machine Z coordinate for travelling, typically near max Z to avoid ever hitting the work )
-#<_TravelFeed> =     300.0     ( feedrate used for general Z moves when avoiding G0 )
+#<_TravelFeed> =     1500.0     ( feedrate used for general Z moves when avoiding G0 )
 #<_ProbeX> =          888.9     ( machine X coordinate of switch/touch-off plate )
 #<_ProbeY> =          24.8     ( machine Y coordinate of switch/touch-off plate )
 #<_ProbeFastZ> =       -1     ( machine Z coord to move to before starting probe, longest tool should not touch switch at this Z )
@@ -55,14 +79,25 @@ O<tool-change> SUB
 #<_ToolChangeX> =     350     ( machine X coordinate to pause at for manual tool changing )
 #<_ToolChangeY> =     30     ( machine Y coordinate to pause at for manual tool changing )
 #<_MistOnDuringProbe> =   0     ( set to 1 for mist, or 2 for coolant, or 0 for nothing during probing, to clear switch of swarf )
+
 (-------------------------------------------------------------------------------------------------------)
 
 O100 IF [ EXISTS[#<_ToolDidFirst>] EQ 0 ]
-        #<_ToolDidFirst> = 0
+        #<_ToolDidFirst> = 0                   
+	      #<_ToolZRef> = 0                       ( Following were added to clear the memory as residual parameters )
+	      #<_ToolZ> = 0                          ( created incorrect settings )
+	      #<ToolZLast> = 0
 O100 ENDIF
 O105 IF [ #<_ToolDidFirst> EQ 0 ]
    G49                                         ( clear tool length compensation prior to saving state if this is first time )
+        #<_ToolZRef> = 0                       ( Ensures values are cleared if M600 is not called ) 
+        #<_ToolZ> = 0
+        #<ToolZLast> = 0
+
 O105 ENDIF
+
+G53 G1 F[#<_TravelFeed>] Z[#<_TravelZ>]
+G53 G1 F[#<_TravelFeed>] X[#<_ToolChangeX>] Y[#<_ToolChangeY>]  ( Moves to desired potion for manual tool change )
 
 M6                                             ( do the normal M6 stuff )
 M70                                            ( save current modal state )
@@ -84,7 +119,7 @@ O200 IF [ #<_ToolDidFirst> EQ 0 ]
   O101 IF [ #<_MistOnDuringProbe> EQ 1 OR #<_MistOnDuringProbe> EQ 2 ]
     M[7 + #<_MistOnDuringProbe> - 1]           ( turn on mist/coolant )
   O101 ENDIF
-  G38.2 Z[#<_ProbeMinZ> + #<_ProbeFastZ>] F[#<_ProbeFeed1>]    ( trip switch slowly )
+  G38.2 Z[#<_ProbeMinZ> - #<_ProbeFastZ>] F[#<_ProbeFeed1>]    ( trip switch slowly )
   G0 Z[#<_ProbeRetract>]                       ( go up slightly )
   G38.2 Z[#<_ProbeRetract>*-1.25] F[#<_ProbeFeed2>]   ( trip switch very slowly )
   M9                                           ( turn off mist )
@@ -98,7 +133,6 @@ O200 IF [ #<_ToolDidFirst> EQ 0 ]
   #<_ToolDidFirst> = 1                         ( we have been in this section to set reference value already )
 O200 ELSE
   G53 G1 F[#<_TravelFeed>] Z[#<_TravelZ>]      ( go to high travel level on Z )
-  G53 G0 X[#<_ToolChangeX>] Y[#<_ToolChangeY>] ( nice place for changing tool )
   O107 IF [#<_UseInches> EQ 1 ]
     #<ToolDiamIn> = #5410
     #<ToolDiamMM> = [ #<ToolDiamIn> * 25.4 ]
@@ -128,12 +162,11 @@ O200 ELSE
   G43.1 Z[#<_ToolZ> - #<_ToolZRef>]            ( set new tool length Z offset, we do this now to show operator even though it has to be set again after M72 )
   G53 G1 F[#<_TravelFeed>] Z[#<_TravelZ>]      ( return to high travel level )
   G53 G0 X[#5181] Y[#5182]                     ( return to where we were in X Y)
-  (debug, [#5183 - #<_ToolZLast> + #<_ToolZ>])
-  G53 G1 F[#<_TravelFeed>] Z[#5183 - #<_ToolZLast> + #<_ToolZ>]   ( return to where we were in Z, ajusting for tool length change )
   #<_ToolZLast> = #<_ToolZ>                    ( save last tool length )
   
   M72                                          ( restore modal state )
-  G43.1 Z[#<_ToolZ> - #<_ToolZRef>]            ( set new tool length Z offset )
+  G43.1 Z[#<_ToolZ> - #<_ToolZRef>]            ( Apply offset to Z height after Modal reset )
+  
 O200 ENDIF
 
 O<tool-change> ENDSUB
