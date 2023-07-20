@@ -1,9 +1,10 @@
 [DIALOG_GEOMETRY]
-LncMessage-geometry = 910 541 340 102
+LncMessage-geometry = 910 541 340 118
 ToolChangeDialog-geometry = 910 541 340 122
 CalculatorDialog-geometry = 910 512 472 376
 RunFromLineDialog-geometry = 795 416 340 222
 _CALCULATOR = 910 512 472 376
+AboutDialog-geometry = half
 
 [DIALOG_OPTIONS]
 EntryDialog_play_sound = True
@@ -21,10 +22,10 @@ RunFromLineDialog_play_sound = True
 RunFromLineDialog_sound_type = READY
 
 [BOOK_KEEPING]
-last_loaded_directory = /media/howard/GCODE/Traintrack
-last_loaded_file = /media/howard/GCODE/Traintrack/Cross.ngc
+last_loaded_directory = /media/howard/GCODE
+last_loaded_file = /media/howard/GCODE/facing.ngc
 style_QSS_Path = /usr/share/qtvcp/screens/qtdragon_hd/dark_grey.qss
-RecentPath_0 = /media/howard/GCODE/Traintrack/Cross.ngc
+RecentPath_0 = /media/howard/GCODE/facing.ngc
 
 [ORIGINOFFSET_SYSTEM_NAMES]
 __dialogOffsetViewWidget-G54 = User System 1
