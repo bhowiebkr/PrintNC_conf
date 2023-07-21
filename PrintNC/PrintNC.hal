@@ -8,7 +8,7 @@ loadrt [EMCMOT]EMCMOT servo_period_nsec=[EMCMOT]SERVO_PERIOD num_joints=[KINS]JO
 loadrt hostmot2
 loadrt hm2_eth board_ip="10.10.10.10" config="num_encoders=1 num_pwmgens=0 num_stepgens=5 sserial_port_0=00xxxx" 
 setp    hm2_7i76e.0.watchdog.timeout_ns 5000000
-loadrt pid names=pid.x,pid.y,pid.y2,pid.z,pid.s,pid.a
+loadrt pid names=pid.x,pid.y,pid.y2,pid.z,pid.s,pid.w
 
 addf hm2_7i76e.0.read          servo-thread
 addf motion-command-handler   servo-thread
@@ -18,7 +18,7 @@ addf pid.y.do-pid-calcs       servo-thread
 addf pid.y2.do-pid-calcs       servo-thread
 addf pid.z.do-pid-calcs       servo-thread
 addf pid.s.do-pid-calcs       servo-thread
-addf pid.a.do-pid-calcs        servo-thread
+addf pid.w.do-pid-calcs        servo-thread
 addf hm2_7i76e.0.write         servo-thread
 setp hm2_7i76e.0.dpll.01.timer-us -50
 setp hm2_7i76e.0.stepgen.timer-number 1
@@ -42,7 +42,7 @@ net min-home-y     <=  hm2_7i76e.0.7i76.0.0.input-06-not
 net min-home-y2     <=  hm2_7i76e.0.7i76.0.0.input-07-not
 
 # --- MIN-HOME-A ---
-net min-home-a     <=  hm2_7i76e.0.7i76.0.0.input-03-not
+net min-home-w     <=  hm2_7i76e.0.7i76.0.0.input-03-not
 
 #*******************
 #  AXIS X JOINT 0
@@ -260,26 +260,26 @@ net max-home-z     =>  joint.3.pos-lim-sw-in
 #  AXIS Probe/Sensor JOINT 4
 #*******************
 
-setp   pid.a.Pgain     [JOINT_4]P
-setp   pid.a.Igain     [JOINT_4]I
-setp   pid.a.Dgain     [JOINT_4]D
-setp   pid.a.bias      [JOINT_4]BIAS
-setp   pid.a.FF0       [JOINT_4]FF0
-setp   pid.a.FF1       [JOINT_4]FF1
-setp   pid.a.FF2       [JOINT_4]FF2
-setp   pid.a.deadband  [JOINT_4]DEADBAND
-setp   pid.a.maxoutput [JOINT_4]MAX_OUTPUT
-setp   pid.a.error-previous-target true
+setp   pid.w.Pgain     [JOINT_4]P
+setp   pid.w.Igain     [JOINT_4]I
+setp   pid.w.Dgain     [JOINT_4]D
+setp   pid.w.bias      [JOINT_4]BIAS
+setp   pid.w.FF0       [JOINT_4]FF0
+setp   pid.w.FF1       [JOINT_4]FF1
+setp   pid.w.FF2       [JOINT_4]FF2
+setp   pid.w.deadband  [JOINT_4]DEADBAND
+setp   pid.w.maxoutput [JOINT_4]MAX_OUTPUT
+setp   pid.w.error-previous-target true
 # This setting is to limit bogus stepgen
 # velocity corrections caused by position
 # feedback sample time jitter.
-setp   pid.a.maxerror 0.012700
+setp   pid.w.maxerror 0.012700
 
-net a-index-enable  <=> pid.a.index-enable
-net a-enable        =>  pid.a.enable
-net a-pos-cmd       =>  pid.a.command
-net a-pos-fb        =>  pid.a.feedback
-net a-output        <=  pid.a.output
+net w-index-enable  <=> pid.w.index-enable
+net w-enable        =>  pid.w.enable
+net w-pos-cmd       =>  pid.w.command
+net w-pos-fb        =>  pid.w.feedback
+net w-output        <=  pid.w.output
 
 # Step Gen signals/setup
 
@@ -295,13 +295,13 @@ setp   hm2_7i76e.0.stepgen.04.maxvel           [JOINT_4]STEPGEN_MAXVEL
 
 # ---closedloop stepper signals---
 
-net a-pos-cmd    <= joint.4.motor-pos-cmd
-net a-vel-cmd    <= joint.4.vel-cmd
-net a-output     => hm2_7i76e.0.stepgen.04.velocity-cmd
-net a-pos-fb     <= hm2_7i76e.0.stepgen.04.position-fb
-net a-pos-fb     => joint.4.motor-pos-fb
-net a-enable     <= joint.4.amp-enable-out
-net a-enable     => hm2_7i76e.0.stepgen.04.enable
+net w-pos-cmd    <= joint.4.motor-pos-cmd
+net w-vel-cmd    <= joint.4.vel-cmd
+net w-output     => hm2_7i76e.0.stepgen.04.velocity-cmd
+net w-pos-fb     <= hm2_7i76e.0.stepgen.04.position-fb
+net w-pos-fb     => joint.4.motor-pos-fb
+net w-enable     <= joint.4.amp-enable-out
+net w-enable     => hm2_7i76e.0.stepgen.04.enable
 
 # ---setup home / limit switch signals---
 
@@ -309,9 +309,13 @@ net a-enable     => hm2_7i76e.0.stepgen.04.enable
 #net a-neg-limit     =>  joint.4.neg-lim-sw-in
 #net max-home-a     =>  joint.4.pos-lim-sw-in
 
-net a-home-sw     =>  joint.4.home-sw-in
-net a-neg-limit     =>  joint.4.neg-lim-sw-in
-net a-pos-limit     =>  joint.4.pos-lim-sw-in
+#net w-home-sw     =>  joint.4.home-sw-in
+#net w-neg-limit     =>  joint.4.neg-lim-sw-in
+#net w-pos-limit     =>  joint.4.pos-lim-sw-in
+
+net min-home-w     =>  joint.4.home-sw-in
+net z-neg-limit     =>  joint.4.neg-lim-sw-in
+net min-home-w     =>  joint.4.pos-lim-sw-in
 
 #*******************
 #  SPINDLE
