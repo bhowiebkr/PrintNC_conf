@@ -259,7 +259,7 @@ net max-home-z     =>  joint.3.pos-lim-sw-in
 #*******************
 #  AXIS Probe/Sensor JOINT 4
 #*******************
-
+     
 setp   pid.w.Pgain     [JOINT_4]P
 setp   pid.w.Igain     [JOINT_4]I
 setp   pid.w.Dgain     [JOINT_4]D
