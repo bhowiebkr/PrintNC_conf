@@ -51,7 +51,9 @@ net servo-z-estop  hm2_7i76e.0.7i76.0.0.input-17 => estop-latch.4.fault-in
 #net probe-estop  hm2_7i76e.0.7i76.0.0.input-10-not  => estop-latch.5.fault-in
 
 #Spindle
-loadusr -Wn vfd hy_vfd -n vfd -d /dev/rs485_dongle -p none -r 9600
+#loadusr -Wn vfd hy_vfd -n vfd -d /dev/rs485_dongle -p none -r 9600
+loadusr -Wn vfd hy_vfd -n vfd -d /dev/ttyUSB0 -p none -r 9600
+
 setp vfd.enable 1 # This enables the VFD in the driver
 
 # Connect Speed
