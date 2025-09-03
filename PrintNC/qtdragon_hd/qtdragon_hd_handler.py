@@ -77,6 +77,7 @@ class HandlerClass:
 
         STATUS.connect('general', self.dialog_return)
         STATUS.connect('state-on', lambda w: self.enable_onoff(True))
+        STATUS.connect('state-on', lambda w: self.set_jog_rate())
         STATUS.connect('state-off', lambda w: self.enable_onoff(False))
         STATUS.connect('mode-auto', lambda w: self.enable_auto(True))
         STATUS.connect('gcode-line-selected', lambda w, line: self.set_start_line(line))
@@ -167,6 +168,7 @@ class HandlerClass:
         # no buttons hide frame
         if flag:
             self.w.frame_macro_buttons.hide()
+        
 
     #############################
     # SPECIAL FUNCTIONS SECTION #
@@ -1004,6 +1006,12 @@ class HandlerClass:
         if self.timer_on:
             self.timer_on = False
             self.add_status("Run timer stopped at {}".format(self.w.lbl_runtime.text()))
+    
+    def set_jog_rate(self):
+        # Set jog velocity from INI file DEFAULT_LINEAR_JOG_VEL when LinuxCNC is ready
+        default_jog_vel = INFO.get_error_safe_setting('DISPLAY', 'DEFAULT_LINEAR_JOG_VEL', "360")
+        self.w.slider_jog_linear.setValue(int(default_jog_vel))
+        self.add_status("Jog rate set to {} mm/min from INI file".format(default_jog_vel))
 
     def back(self):
         if os.path.exists(self.default_setup):
