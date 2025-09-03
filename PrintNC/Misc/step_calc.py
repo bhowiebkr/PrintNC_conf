@@ -1,21 +1,21 @@
-
-
-ENCODER_RES = 131072.0  # encoder resolution per turn
-STEPS_REV = 1000  # steps per revolution
-LEAD_SCREW = 4.0  # mm
+motor_pulley_teeth = 28
+screw_pulley_teeth = 36
+motor_steps_per_revolution = 2000  # steps per revolution
+screw_pitch = 5.0  # mm
 
 
 def main():
+    # Calculate steps per revolution of the screw
+    steps_per_revolution = (
+        float(screw_pulley_teeth)
+        / float(motor_pulley_teeth)
+        * motor_steps_per_revolution
+    )
 
-    instruction_unit = LEAD_SCREW / STEPS_REV
+    # Calculate step scale (mm per step)
+    step_scale = steps_per_revolution * 1 / screw_pitch
 
-    result = ENCODER_RES / instruction_unit
-    print(f'Value calculated: {result}')
-
-    # In the config I have for Z:
-    # P03-10 = 8192
-    # P03-11 = 625
+    print(f"Step scale: {step_scale} mm/step")
 
 
-if __name__ == '__main__':
-    main()
+main()
