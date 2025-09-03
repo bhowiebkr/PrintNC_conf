@@ -5,12 +5,7 @@ PrintNC/position.txt
 PrintNC/halshow.preferences
 PrintNC/autosave.halscope
 *.pyc
-PrintNC/qtdragon_hd/__pycache__/qtdragon_hd_handler.cpython-37.pyc
-PrintNC/qtdragon.pref
+PrintNC/qtdragon_hd/__pycache__/
 PrintNC/PrintNC_DEBUG.ini
 PrintNC/PrintNC.BACKUP.ini
-qtdragon.pref
-PrintNC/qtdragon.pref
-PrintNC/tool.tbl
 PrintNC/4th axes example
-PrintNC/qtdragon.pref
