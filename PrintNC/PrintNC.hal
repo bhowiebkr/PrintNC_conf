@@ -41,8 +41,7 @@ net min-home-y     <=  hm2_7i76e.0.7i76.0.0.input-06-not
 # --- MIN-HOME-Y2 ---
 net min-home-y2     <=  hm2_7i76e.0.7i76.0.0.input-07-not
 
-# --- MIN-HOME-A ---
-net min-home-w     <=  hm2_7i76e.0.7i76.0.0.input-03-not
+# Input-03 available for future use
 
 #*******************
 #  AXIS X JOINT 0
@@ -256,66 +255,6 @@ net max-home-z     =>  joint.3.home-sw-in
 net z-neg-limit     =>  joint.3.neg-lim-sw-in
 net max-home-z     =>  joint.3.pos-lim-sw-in
 
-#*******************
-#  AXIS Probe/Sensor JOINT 4
-#*******************
-     
-#setp   pid.w.Pgain     [JOINT_4]P
-#setp   pid.w.Igain     [JOINT_4]I
-#setp   pid.w.Dgain     [JOINT_4]D
-#setp   pid.w.bias      [JOINT_4]BIAS
-#setp   pid.w.FF0       [JOINT_4]FF0
-#setp   pid.w.FF1       [JOINT_4]FF1
-#setp   pid.w.FF2       [JOINT_4]FF2
-#setp   pid.w.deadband  [JOINT_4]DEADBAND
-#setp   pid.w.maxoutput [JOINT_4]MAX_OUTPUT
-#setp   pid.w.error-previous-target true
-# This setting is to limit bogus stepgen
-# velocity corrections caused by position
-# feedback sample time jitter.
-#setp   pid.w.maxerror 0.012700
-
-#net w-index-enable  <=> pid.w.index-enable
-#net w-enable        =>  pid.w.enable
-#net w-pos-cmd       =>  pid.w.command
-#net w-pos-fb        =>  pid.w.feedback
-#net w-output        <=  pid.w.output
-
-# Step Gen signals/setup
-
-#setp   hm2_7i76e.0.stepgen.04.dirsetup        [JOINT_4]DIRSETUP
-#setp   hm2_7i76e.0.stepgen.04.dirhold         [JOINT_4]DIRHOLD
-#setp   hm2_7i76e.0.stepgen.04.steplen         [JOINT_4]STEPLEN
-#setp   hm2_7i76e.0.stepgen.04.stepspace       [JOINT_4]STEPSPACE
-#setp   hm2_7i76e.0.stepgen.04.position-scale  [JOINT_4]STEP_SCALE
-#setp   hm2_7i76e.0.stepgen.04.step_type        0
-#setp   hm2_7i76e.0.stepgen.04.control-type     1
-#setp   hm2_7i76e.0.stepgen.04.maxaccel         [JOINT_4]STEPGEN_MAXACCEL
-#setp   hm2_7i76e.0.stepgen.04.maxvel           [JOINT_4]STEPGEN_MAXVEL
-
-# ---closedloop stepper signals---
-
-#net w-pos-cmd    <= joint.4.motor-pos-cmd
-#net w-vel-cmd    <= joint.4.vel-cmd
-#net w-output     => hm2_7i76e.0.stepgen.04.velocity-cmd
-#net w-pos-fb     <= hm2_7i76e.0.stepgen.04.position-fb
-#net w-pos-fb     => joint.4.motor-pos-fb
-#net w-enable     <= joint.4.amp-enable-out
-#net w-enable     => hm2_7i76e.0.stepgen.04.enable
-
-# ---setup home / limit switch signals---
-
-#net max-home-a     =>  joint.4.home-sw-in
-#net a-neg-limit     =>  joint.4.neg-lim-sw-in
-#net max-home-a     =>  joint.4.pos-lim-sw-in
-
-#net w-home-sw     =>  joint.4.home-sw-in
-#net w-neg-limit     =>  joint.4.neg-lim-sw-in
-#net w-pos-limit     =>  joint.4.pos-lim-sw-in
-
-#net min-home-w     =>  joint.4.home-sw-in
-#net z-neg-limit     =>  joint.4.neg-lim-sw-in
-#net min-home-w     =>  joint.4.pos-lim-sw-in
 
 #*******************
 #  SPINDLE
@@ -406,9 +345,7 @@ net machine-is-enabled        <=  motion.motion-enabled
 #  ---digital in / out signals---
 
 #  ---estop signals---
-
-net estop-out     <=  iocontrol.0.user-enable-out
-net estop-out     =>  iocontrol.0.emc-enable-in
+# Estop handling is managed by custom.hal estop-latch system
 
 #  ---manual tool change signals---
 

@@ -5,8 +5,8 @@ loadrt debounce cfg=1
 #loadrt near
 
 
-# add them both to the servo thread so they do stuff. If you don't add them, linuxcnc still works but the 
-# latch doesn't and you are wasting hours wondering why.addf estop-latch.0 servo-thread
+# add them to the servo thread so they do stuff. If you don't add them, linuxcnc still works but the 
+# latch doesn't and you are wasting hours wondering why.
 addf estop-latch.0 servo-thread
 addf estop-latch.1 servo-thread
 addf estop-latch.2 servo-thread
@@ -50,8 +50,7 @@ net servo-yr-estop hm2_7i76e.0.7i76.0.0.input-19 => estop-latch.3.fault-in
 net servo-z-estop  hm2_7i76e.0.7i76.0.0.input-17 => estop-latch.4.fault-in
 #net probe-estop  hm2_7i76e.0.7i76.0.0.input-10-not  => estop-latch.5.fault-in
 
-#Spindle
-#loadusr -Wn vfd hy_vfd -n vfd -d /dev/rs485_dongle -p none -r 9600
+# Spindle VFD connection
 loadusr -Wn vfd hy_vfd -n vfd -d /dev/ttyUSB0 -p none -r 9600
 
 setp vfd.enable 1 # This enables the VFD in the driver
@@ -77,11 +76,7 @@ net spindle-voltage <= vfd.rated-motor-voltage
 # see: https://linuxcnc.org/docs/html/gcode/g-code.html#gcode:g38
 
 
-# Debounce the probe
-#net probe_raw <= hm2_7i76e.0.7i76.0.0.input-09-not
-#net probe_raw => debounce.0.0.in
-#net probe-in motion.probe-input <= debounce.0.0.out
-
+# Probe input (direct connection - debouncing available if needed)
 net probe-in motion.probe-input <= hm2_7i76e.0.7i76.0.0.input-09-not 
 
 # connect the vfd spindle at speed to simple 0 at speed (at speed is true when the spindle has rampped up to the correct speed)
