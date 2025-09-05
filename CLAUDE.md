@@ -7,8 +7,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 This repository contains LinuxCNC configuration files for Howard's PrintNC CNC machine. The machine uses:
 - Mesa 7i76e Ethernet I/O card
 - QtDragon HD GUI interface
-- 3-axis configuration (X, Y with dual motors Y2, Z)
-- Tool height sensor
+- 3-axis gantry configuration (X, Y with dual motors Y/Y2, Z)
+- Manual tool changes (no ATC - requires manual endmill/collet changes)
+- Tool height sensor at machine coordinates X354.5, Y368.9
 - 2.2kW spindle with VFD control
 
 ## Key Configuration Files
@@ -21,7 +22,10 @@ This repository contains LinuxCNC configuration files for Howard's PrintNC CNC m
 
 ### Tool Management
 - `PrintNC/tool.tbl` - Tool table defining tool offsets and parameters
+- `PrintNC/subroutines/tool-change.ngc` - Automatic tool height measurement subroutine (M6 remap)
+- `PrintNC/subroutines/tool-job-begin.ngc` - Job initialization subroutine (M600 remap)
 - Tool height sensor is configured in the HAL files
+- Manual tool changes with automatic Z offset compensation via tool sensor probing
 
 ### UI Configuration
 - `PrintNC/qtdragon_hd/` - QtDragon HD interface customizations
@@ -95,3 +99,14 @@ Use the calculation scripts in `PrintNC/Misc/` to determine correct values, then
 
 ### UI customizations
 Modify `PrintNC/qtdragon_hd/qtdragon_hd_handler.py` for behavior changes
+
+### Manual Tool Change Workflow
+1. Touch off workpiece X, Y, Z with reference tool to set G54
+2. Run `M600` in MDI to reset tool measurement system
+3. Run `M6 Tx` with reference tool to establish baseline height
+4. During program execution, each `M6` command will:
+   - Move to tool change position (X300, Y30)
+   - Pause for manual tool/collet change
+   - Automatically probe new tool at sensor location (X354.5, Y368.9)
+   - Calculate and apply Z offset relative to reference tool
+   - Return to work with correct Z compensation
