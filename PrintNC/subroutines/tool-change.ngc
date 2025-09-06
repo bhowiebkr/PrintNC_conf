@@ -73,9 +73,9 @@ O<tool-change> SUB
 #<_ProbeY> =         368.9     ( machine Y coordinate of switch/touch-off plate - from INI TOUCH_SENSOR_POS_Y )
 #<_ProbeFastZ> =       -1     ( machine Z coord to move to before starting probe, longest tool should not touch switch at this Z )
 #<_ProbeMinZ> =         -120     ( machine Z coord to stop probe - from INI PROBE_SEARCH_DIST )
-#<_ProbeRetract> =      1.0     ( small distance to retract before approaching switch/touch-off plate - from INI TOUCH_OFF_DIST )
-#<_ProbeFastFeed> =   500.0     ( feed rate for moving to _ProbeFastZ - from INI ROUGH_PROBE_SPEED )
-#<_ProbeFeed1> =      300.0     ( feed rate for touching switch/touch-off plate first time - from INI ROUGH_PROBE_SPEED )
+#<_ProbeRetract> =      1.5     ( small distance to retract before approaching switch/touch-off plate - from INI TOUCH_OFF_DIST )
+#<_ProbeFastFeed> =  1000.0     ( feed rate for moving to _ProbeFastZ - from INI ROUGH_PROBE_SPEED )
+#<_ProbeFeed1> =      600.0     ( feed rate for touching switch/touch-off plate first time - from INI ROUGH_PROBE_SPEED )
 #<_ProbeFeed2> =       10.0     ( feed rate for touching switch/touch-off plate second time - from INI FINE_PROBE_SPEED )
 #<_ToolChangeX> =     300     ( machine X coordinate to pause at for manual tool changing - from INI CHANGE_POS_X )
 #<_ToolChangeY> =     30     ( machine Y coordinate to pause at for manual tool changing - from INI CHANGE_POS_Y )
@@ -98,7 +98,7 @@ O105 IF [ #<_ToolDidFirst> EQ 0 ]
 O105 ENDIF
 
 G53 G1 F[#<_TravelFeed>] Z[#<_TravelZ>]
-G53 G1 F[#<_TravelFeed>] X[#<_ToolChangeX>] Y[#<_ToolChangeY>]  ( Moves to desired potion for manual tool change )
+G53 G0 X[#<_ToolChangeX>] Y[#<_ToolChangeY>]  ( Moves to desired potion for manual tool change )
 
 M6                                             ( do the normal M6 stuff )
 M70                                            ( save current modal state )

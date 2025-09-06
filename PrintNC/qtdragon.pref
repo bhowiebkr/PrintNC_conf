@@ -1,6 +1,6 @@
 [DIALOG_GEOMETRY]
 AboutDialog-geometry = half
-LncMessage-geometry = 910 505 340 118
+LncMessage-geometry = 910 505 232 122
 ToolChangeDialog-geometry = 910 505 340 237
 
 [DIALOG_OPTIONS]
@@ -19,10 +19,10 @@ RunFromLineDialog_play_sound = True
 RunFromLineDialog_sound_type = READY
 
 [BOOK_KEEPING]
-last_loaded_directory = /home/howard/GCODE/Misc
-last_loaded_file = /home/howard/GCODE/Misc/simple_tool_test.ngc
+last_loaded_directory = /home/howard/GCODE/Misc/gantry bk block
+last_loaded_file = /home/howard/GCODE/Misc/PXO 3 Camera/1_6mm_adaptive.ngc
 style_QSS_Path = /usr/share/qtvcp/screens/qtdragon_hd/dark_grey.qss
-RecentPath_0 = /home/howard/GCODE/Misc/simple_tool_test.ngc
+RecentPath_0 = /home/howard/GCODE/Misc/gantry bk block/pockets.ngc
 
 [ORIGINOFFSET_SYSTEM_NAMES]
 __dialogOffsetViewWidget-G54 = User System 1
