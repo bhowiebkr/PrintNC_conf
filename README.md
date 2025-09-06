@@ -9,7 +9,7 @@ Complete LinuxCNC configuration for a PrintNC CNC machine build featuring 3-axis
 - **Frame**: PrintNC steel tube construction
 - **Work envelope**: Configured for medium-format machining
 - **Spindle**: 2.2kW VFD-controlled spindle (1000-24000 RPM)
-- **Motion**: Ball screw drive on all axes with stepper motors
+- **Motion**: Ball screw drive on all axes with NEMA 24 JMC 400W AC servo motors
 - **Control**: Mesa 7i76e Ethernet I/O card with LinuxCNC
 
 ## Hardware Configuration
