@@ -1,6 +1,6 @@
 [DIALOG_GEOMETRY]
 AboutDialog-geometry = half
-LncMessage-geometry = 910 505 232 122
+LncMessage-geometry = 910 505 340 118
 ToolChangeDialog-geometry = 910 505 340 237
 
 [DIALOG_OPTIONS]
@@ -19,10 +19,10 @@ RunFromLineDialog_play_sound = True
 RunFromLineDialog_sound_type = READY
 
 [BOOK_KEEPING]
-last_loaded_directory = /home/howard/GCODE/Misc/gantry bk block
-last_loaded_file = /home/howard/GCODE/Misc/PXO 3 Camera/1_6mm_adaptive.ngc
+last_loaded_directory = /home/howard/GCODE/Svalboard_GCODE
+last_loaded_file = /home/howard/GCODE/Svalboard_GCODE/test_part_3_ops.ngc
 style_QSS_Path = /usr/share/qtvcp/screens/qtdragon_hd/dark_grey.qss
-RecentPath_0 = /home/howard/GCODE/Misc/gantry bk block/pockets.ngc
+RecentPath_0 = /home/howard/GCODE/Svalboard_GCODE/test_part_3_ops.ngc
 
 [ORIGINOFFSET_SYSTEM_NAMES]
 __dialogOffsetViewWidget-G54 = User System 1
@@ -88,7 +88,7 @@ gcodegraphics-user-lat = 0.0
 gcodegraphics-user-lon = 0.0
 
 [CUSTOM_FORM_ENTRIES]
-Tool to load = 0
+Tool to load = 17
 Laser X = 100.0
 Laser Y = -20.0
 Sensor X = 10.0
