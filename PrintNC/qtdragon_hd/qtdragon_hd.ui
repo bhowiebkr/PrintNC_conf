@@ -840,6 +840,40 @@
                </widget>
               </item>
               <item>
+               <widget class="QPushButton" name="btn_boardsquare">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="minimumSize">
+                 <size>
+                  <width>80</width>
+                  <height>40</height>
+                 </size>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>110</width>
+                  <height>40</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>SQUARE</string>
+                </property>
+                <property name="checkable">
+                 <bool>true</bool>
+                </property>
+                <property name="index" stdset="0">
+                 <number>12</number>
+                </property>
+                <attribute name="buttonGroup">
+                 <string notr="true">page_buttonGroup</string>
+                </attribute>
+               </widget>
+              </item>
+              <item>
                <spacer name="horizontalSpacer">
                 <property name="orientation">
                  <enum>Qt::Horizontal</enum>
@@ -6309,6 +6343,25 @@ TO FILE</string>
                 </widget>
                 <widget class="QWidget" name="main_tab_widgetPage12">
                  <layout class="QVBoxLayout" name="layout_linecut">
+                  <property name="spacing">
+                   <number>0</number>
+                  </property>
+                  <property name="leftMargin">
+                   <number>4</number>
+                  </property>
+                  <property name="topMargin">
+                   <number>0</number>
+                  </property>
+                  <property name="rightMargin">
+                   <number>4</number>
+                  </property>
+                  <property name="bottomMargin">
+                   <number>0</number>
+                  </property>
+                 </layout>
+                </widget>
+                <widget class="QWidget" name="main_tab_widgetPage13">
+                 <layout class="QVBoxLayout" name="layout_boardsquare">
                   <property name="spacing">
                    <number>0</number>
                   </property>
