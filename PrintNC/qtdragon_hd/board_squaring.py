@@ -1,4 +1,5 @@
 import os
+import json
 import tempfile
 import math
 from PyQt5 import QtWidgets, QtCore, QtGui
@@ -422,10 +423,15 @@ class BoardPreview(QtWidgets.QWidget):
         painter.end()
 
 
+BOARD_SQUARING_CONF = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                   'board_squaring.conf')
+
+
 class BoardSquaring(QtWidgets.QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self._build_ui()
+        self._load_params()
         self._connect_signals()
         self._update_preview()
 
@@ -555,11 +561,62 @@ class BoardSquaring(QtWidgets.QWidget):
         self.btn_send.clicked.connect(self._send_to_linuxcnc)
         for w in [self.input_x, self.input_y, self.input_z,
                   self.input_tool_dia, self.input_stepover_pct,
-                  self.input_depth_per_pass]:
+                  self.input_depth_per_pass, self.input_surface_depth,
+                  self.input_rpm, self.input_feed, self.input_plunge_feed]:
             w.textChanged.connect(self._update_preview)
+            w.textChanged.connect(self._save_params)
         for chk in [self.chk_top, self.chk_plus_x, self.chk_minus_x,
                     self.chk_plus_y, self.chk_minus_y]:
             chk.toggled.connect(self._update_preview)
+            chk.toggled.connect(self._save_params)
+
+    def _param_widgets(self):
+        return {
+            'x': self.input_x,
+            'y': self.input_y,
+            'z': self.input_z,
+            'tool_dia': self.input_tool_dia,
+            'stepover_pct': self.input_stepover_pct,
+            'depth_per_pass': self.input_depth_per_pass,
+            'surface_depth': self.input_surface_depth,
+            'rpm': self.input_rpm,
+            'feed': self.input_feed,
+            'plunge_feed': self.input_plunge_feed,
+        }
+
+    def _checkbox_widgets(self):
+        return {
+            'top': self.chk_top,
+            'plus_x': self.chk_plus_x,
+            'minus_x': self.chk_minus_x,
+            'plus_y': self.chk_plus_y,
+            'minus_y': self.chk_minus_y,
+        }
+
+    def _save_params(self):
+        data = {}
+        for key, w in self._param_widgets().items():
+            data[key] = w.text()
+        for key, chk in self._checkbox_widgets().items():
+            data['chk_' + key] = chk.isChecked()
+        try:
+            with open(BOARD_SQUARING_CONF, 'w') as f:
+                json.dump(data, f, indent=2)
+        except OSError:
+            pass
+
+    def _load_params(self):
+        try:
+            with open(BOARD_SQUARING_CONF, 'r') as f:
+                data = json.load(f)
+        except (OSError, json.JSONDecodeError):
+            return
+        for key, w in self._param_widgets().items():
+            if key in data:
+                w.setText(str(data[key]))
+        for key, chk in self._checkbox_widgets().items():
+            if 'chk_' + key in data:
+                chk.setChecked(data['chk_' + key])
 
     def _get_float(self, widget, fallback=1.0):
         try:

@@ -1,4 +1,5 @@
 import os
+import json
 import tempfile
 import math
 from PyQt5 import QtWidgets, QtCore, QtGui
@@ -126,12 +127,16 @@ class ToolpathView(QtWidgets.QWidget):
         painter.end()
 
 
+SURFACING_CONF = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                              'surfacing.conf')
+
+
 class Surfacing(QtWidgets.QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self._build_ui()
+        self._load_params()
         self._connect_signals()
-        # Generate initial preview
         self._update_preview()
 
     def _build_ui(self):
@@ -221,12 +226,48 @@ class Surfacing(QtWidgets.QWidget):
     def _connect_signals(self):
         self.btn_save.clicked.connect(self._save_gcode)
         self.btn_send.clicked.connect(self._send_to_linuxcnc)
-        # Live preview updates when any parameter changes
-        self.input_x.textChanged.connect(self._update_preview)
-        self.input_y.textChanged.connect(self._update_preview)
-        self.input_tool_dia.textChanged.connect(self._update_preview)
-        self.input_stepover_pct.textChanged.connect(self._update_preview)
+        for w in [self.input_x, self.input_y, self.input_tool_dia,
+                  self.input_stepover_pct, self.input_depth, self.input_safe_z,
+                  self.input_rpm, self.input_feed]:
+            w.textChanged.connect(self._update_preview)
+            w.textChanged.connect(self._save_params)
         self.combo_direction.currentIndexChanged.connect(self._update_preview)
+        self.combo_direction.currentIndexChanged.connect(self._save_params)
+
+    def _param_widgets(self):
+        return {
+            'x': self.input_x,
+            'y': self.input_y,
+            'tool_dia': self.input_tool_dia,
+            'stepover_pct': self.input_stepover_pct,
+            'depth': self.input_depth,
+            'safe_z': self.input_safe_z,
+            'rpm': self.input_rpm,
+            'feed': self.input_feed,
+        }
+
+    def _save_params(self):
+        data = {}
+        for key, w in self._param_widgets().items():
+            data[key] = w.text()
+        data['direction'] = self.combo_direction.currentIndex()
+        try:
+            with open(SURFACING_CONF, 'w') as f:
+                json.dump(data, f, indent=2)
+        except OSError:
+            pass
+
+    def _load_params(self):
+        try:
+            with open(SURFACING_CONF, 'r') as f:
+                data = json.load(f)
+        except (OSError, json.JSONDecodeError):
+            return
+        for key, w in self._param_widgets().items():
+            if key in data:
+                w.setText(str(data[key]))
+        if 'direction' in data:
+            self.combo_direction.setCurrentIndex(data['direction'])
 
     def _get_float(self, widget, fallback=1.0):
         try:
