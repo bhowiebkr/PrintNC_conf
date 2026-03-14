@@ -46,184 +46,262 @@ class BoardPreview(QtWidgets.QWidget):
         side_h = h - top_h
 
         # --- TOP VIEW ---
-        margin = 60
-        top_draw_w = w - 2 * margin
-        top_draw_h = top_h - 2 * margin
+        # Reserve space for dimension lines outside the drawing
+        dim_space = 70   # space on left/bottom for dimension lines
+        dim_space_t = 35  # space on top
+        dim_space_r = 45  # space on right
 
-        # Scale to fit board + tool offset area
-        total_x = self.board_x + self.tool_dia
-        total_y = self.board_y + self.tool_dia
-        scale_x = top_draw_w / total_x
-        scale_y = top_draw_h / total_y
-        scale = min(scale_x, scale_y) * 0.75
+        draw_area_w = w - dim_space - dim_space_r
+        draw_area_h = top_h - dim_space_t - dim_space
+
+        tool_r = self.tool_dia / 2
+        has_sides = any(op in self.ops for op in ["+x", "-x", "+y", "-y"])
+        total_x = self.board_x + (self.tool_dia if has_sides else 0)
+        total_y = self.board_y + (self.tool_dia if has_sides else 0)
+
+        scale_x = draw_area_w / total_x
+        scale_y = draw_area_h / total_y
+        scale = min(scale_x, scale_y) * 0.88
 
         actual_w = self.board_x * scale
         actual_h = self.board_y * scale
-        # Center on the total area (board + tool offset)
         total_w = total_x * scale
         total_h = total_y * scale
-        ox = margin + (top_draw_w - total_w) / 2 + (self.tool_dia / 2) * scale
-        oy = margin + (top_draw_h - total_h) / 2 + (self.tool_dia / 2) * scale
+
+        # Center the total area in the drawing zone
+        cx = dim_space + (draw_area_w - total_w) / 2 + (tool_r * scale if has_sides else 0)
+        cy = dim_space_t + (draw_area_h - total_h) / 2 + (tool_r * scale if has_sides else 0)
 
         def tx(x):
-            return ox + x * scale
+            return cx + x * scale
 
         def ty(y):
-            return oy + actual_h - y * scale
+            return cy + actual_h - y * scale
 
-        # Tool offset visualization
-        tool_r = self.tool_dia / 2
-        has_sides = any(op in self.ops for op in ["+x", "-x", "+y", "-y"])
+        # Helper to draw a dimension line with ticks and centered text
+        def draw_dim_h(y_pos, x_start, x_end, label, color, tick_len=5):
+            """Horizontal dimension line at y_pos from x_start to x_end."""
+            painter.setPen(QtGui.QPen(color, 1))
+            painter.drawLine(QtCore.QPointF(x_start, y_pos),
+                             QtCore.QPointF(x_end, y_pos))
+            # Ticks
+            painter.drawLine(QtCore.QPointF(x_start, y_pos - tick_len),
+                             QtCore.QPointF(x_start, y_pos + tick_len))
+            painter.drawLine(QtCore.QPointF(x_end, y_pos - tick_len),
+                             QtCore.QPointF(x_end, y_pos + tick_len))
+            # Text centered
+            fm = painter.fontMetrics()
+            tw = fm.horizontalAdvance(label)
+            text_x = (x_start + x_end) / 2 - tw / 2
+            painter.drawText(QtCore.QPointF(text_x, y_pos - 4), label)
+
+        def draw_dim_v(x_pos, y_start, y_end, label, color, tick_len=5):
+            """Vertical dimension line at x_pos from y_start to y_end."""
+            painter.setPen(QtGui.QPen(color, 1))
+            painter.drawLine(QtCore.QPointF(x_pos, y_start),
+                             QtCore.QPointF(x_pos, y_end))
+            # Ticks
+            painter.drawLine(QtCore.QPointF(x_pos - tick_len, y_start),
+                             QtCore.QPointF(x_pos + tick_len, y_start))
+            painter.drawLine(QtCore.QPointF(x_pos - tick_len, y_end),
+                             QtCore.QPointF(x_pos + tick_len, y_end))
+            # Text centered, rotated
+            painter.save()
+            fm = painter.fontMetrics()
+            tw = fm.horizontalAdvance(label)
+            text_y = (y_start + y_end) / 2 + tw / 2
+            painter.translate(x_pos - 5, text_y)
+            painter.rotate(-90)
+            painter.drawText(0, 0, label)
+            painter.restore()
+
+        # --- Draw shapes ---
+
+        # Tool swath fill (outermost)
         if tool_r > 0 and has_sides:
-            # Tool swath (full cutter width) - faint fill
-            swath_r = self.tool_dia  # full diameter beyond board edge
             painter.setPen(QtCore.Qt.NoPen)
-            painter.setBrush(QtGui.QColor(255, 200, 50, 25))
+            painter.setBrush(QtGui.QColor(255, 200, 50, 20))
             painter.drawRect(QtCore.QRectF(
-                tx(-swath_r / 2), ty(self.board_y + swath_r / 2),
-                (self.board_x + swath_r) * scale, (self.board_y + swath_r) * scale))
+                tx(-tool_r), ty(self.board_y + tool_r),
+                total_w, total_h))
 
-            # Tool center path - dashed yellow line
-            pen_tool = QtGui.QPen(QtGui.QColor(255, 200, 50, 180), 2, QtCore.Qt.DashLine)
-            painter.setPen(pen_tool)
+        # Tool center path - dashed yellow
+        if tool_r > 0 and has_sides:
+            painter.setPen(QtGui.QPen(QtGui.QColor(255, 200, 50, 150), 1.5, QtCore.Qt.DashLine))
             painter.setBrush(QtCore.Qt.NoBrush)
             painter.drawRect(QtCore.QRectF(
                 tx(-tool_r), ty(self.board_y + tool_r),
                 (self.board_x + self.tool_dia) * scale,
                 (self.board_y + self.tool_dia) * scale))
 
-        # Board outline (on top of tool path)
-        painter.setPen(QtGui.QPen(QtGui.QColor(120, 120, 140), 2))
+        # Board fill and outline
+        painter.setPen(QtGui.QPen(QtGui.QColor(140, 140, 160), 2))
         painter.setBrush(QtGui.QColor(80, 70, 50, 180))
         painter.drawRect(QtCore.QRectF(tx(0), ty(self.board_y), actual_w, actual_h))
 
-        # Label
-        painter.setPen(QtGui.QColor(180, 180, 180))
+        # --- Surfacing indicator (subtle lines inside board) ---
+        if "top" in self.ops:
+            painter.setPen(QtGui.QPen(QtGui.QColor(0, 200, 0, 100), 1))
+            for i in range(5):
+                frac = (i + 1) / 6
+                yl = ty(self.board_y * frac)
+                painter.drawLine(QtCore.QPointF(tx(0) + 3, yl),
+                                 QtCore.QPointF(tx(self.board_x) - 3, yl))
+
+        # --- Operation labels inside the board ---
         font = painter.font()
+        font.setPointSize(9)
+        font.setBold(True)
+        painter.setFont(font)
+
+        op_num = 1
+        # Center label for surfacing
+        if "top" in self.ops:
+            painter.setPen(QtGui.QColor(0, 220, 0))
+            painter.drawText(QtCore.QRectF(tx(0), ty(self.board_y), actual_w, actual_h),
+                             QtCore.Qt.AlignCenter, "{}: Surface Top".format(op_num))
+            op_num += 1
+
+        # Side operation labels along the edges (inside the board near each edge)
+        font.setPointSize(8)
+        font.setBold(False)
+        painter.setFont(font)
+
+        if "+x" in self.ops:
+            painter.setPen(QtGui.QColor(255, 100, 100))
+            painter.save()
+            painter.translate(tx(self.board_x) - 14, ty(self.board_y / 2) + 30)
+            painter.rotate(-90)
+            painter.drawText(0, 0, "{}: +X end".format(op_num))
+            painter.restore()
+            op_num += 1
+
+        if "-x" in self.ops:
+            painter.setPen(QtGui.QColor(255, 150, 50))
+            painter.save()
+            painter.translate(tx(0) + 12, ty(self.board_y / 2) + 25)
+            painter.rotate(-90)
+            painter.drawText(0, 0, "{}: -X end".format(op_num))
+            painter.restore()
+            op_num += 1
+
+        if "+y" in self.ops:
+            painter.setPen(QtGui.QColor(100, 150, 255))
+            painter.drawText(QtCore.QPointF(tx(self.board_x / 2) - 20, ty(self.board_y) + 14),
+                             "{}: +Y side".format(op_num))
+            op_num += 1
+
+        if "-y" in self.ops:
+            painter.setPen(QtGui.QColor(200, 100, 255))
+            painter.drawText(QtCore.QPointF(tx(self.board_x / 2) - 20, ty(0) - 5),
+                             "{}: -Y side".format(op_num))
+            op_num += 1
+
+        # --- Side cut lines on the tool path ---
+        if "+x" in self.ops:
+            painter.setPen(QtGui.QPen(QtGui.QColor(255, 100, 100), 2))
+            painter.drawLine(QtCore.QPointF(tx(self.board_x + tool_r), ty(self.board_y + tool_r)),
+                             QtCore.QPointF(tx(self.board_x + tool_r), ty(-tool_r)))
+        if "-x" in self.ops:
+            painter.setPen(QtGui.QPen(QtGui.QColor(255, 150, 50), 2))
+            painter.drawLine(QtCore.QPointF(tx(-tool_r), ty(self.board_y + tool_r)),
+                             QtCore.QPointF(tx(-tool_r), ty(-tool_r)))
+        if "+y" in self.ops:
+            painter.setPen(QtGui.QPen(QtGui.QColor(100, 150, 255), 2))
+            painter.drawLine(QtCore.QPointF(tx(-tool_r), ty(self.board_y + tool_r)),
+                             QtCore.QPointF(tx(self.board_x + tool_r), ty(self.board_y + tool_r)))
+        if "-y" in self.ops:
+            painter.setPen(QtGui.QPen(QtGui.QColor(200, 100, 255), 2))
+            painter.drawLine(QtCore.QPointF(tx(-tool_r), ty(-tool_r)),
+                             QtCore.QPointF(tx(self.board_x + tool_r), ty(-tool_r)))
+
+        # --- Extension lines (thin lines from shape to dimension lines) ---
+        ext_color = QtGui.QColor(80, 80, 80)
+        ext_pen = QtGui.QPen(ext_color, 1, QtCore.Qt.DotLine)
+
+        # Bottom extension lines (from board corners down)
+        board_bottom = ty(0)
+        dim_y_inner = board_bottom + 18  # inner dimension line Y
+        dim_y_outer = board_bottom + 36  # outer dimension line Y
+
+        painter.setPen(ext_pen)
+        painter.drawLine(QtCore.QPointF(tx(0), board_bottom + 2),
+                         QtCore.QPointF(tx(0), dim_y_outer + 6))
+        painter.drawLine(QtCore.QPointF(tx(self.board_x), board_bottom + 2),
+                         QtCore.QPointF(tx(self.board_x), dim_y_outer + 6))
+        if has_sides:
+            painter.drawLine(QtCore.QPointF(tx(-tool_r), ty(-tool_r) + 2),
+                             QtCore.QPointF(tx(-tool_r), dim_y_outer + 6))
+            painter.drawLine(QtCore.QPointF(tx(self.board_x + tool_r), ty(-tool_r) + 2),
+                             QtCore.QPointF(tx(self.board_x + tool_r), dim_y_outer + 6))
+
+        # Left extension lines (from board corners left)
+        board_left = tx(0)
+        dim_x_inner = board_left - 18
+        dim_x_outer = board_left - 36
+
+        painter.drawLine(QtCore.QPointF(board_left - 2, ty(0)),
+                         QtCore.QPointF(dim_x_outer - 6, ty(0)))
+        painter.drawLine(QtCore.QPointF(board_left - 2, ty(self.board_y)),
+                         QtCore.QPointF(dim_x_outer - 6, ty(self.board_y)))
+        if has_sides:
+            painter.drawLine(QtCore.QPointF(tx(-tool_r) - 2, ty(-tool_r)),
+                             QtCore.QPointF(dim_x_outer - 6, ty(-tool_r)))
+            painter.drawLine(QtCore.QPointF(tx(-tool_r) - 2, ty(self.board_y + tool_r)),
+                             QtCore.QPointF(dim_x_outer - 6, ty(self.board_y + tool_r)))
+
+        # --- Dimension lines ---
+        font.setPointSize(9)
+        font.setBold(False)
+        painter.setFont(font)
+
+        # Bottom: inner = board X, outer = total X
+        dim_color = QtGui.QColor(180, 180, 180)
+        draw_dim_h(dim_y_inner, tx(0), tx(self.board_x),
+                   "{:.1f}".format(self.board_x), dim_color)
+        if has_sides:
+            tp_color = QtGui.QColor(255, 200, 50, 200)
+            draw_dim_h(dim_y_outer, tx(-tool_r), tx(self.board_x + tool_r),
+                       "{:.1f} (cut path)".format(total_x), tp_color)
+
+        # Left: inner = board Y, outer = total Y
+        draw_dim_v(dim_x_inner, ty(self.board_y), ty(0),
+                   "{:.1f}".format(self.board_y), dim_color)
+        if has_sides:
+            draw_dim_v(dim_x_outer, ty(self.board_y + tool_r), ty(-tool_r),
+                       "{:.1f} (cut path)".format(total_y), tp_color)
+
+        # --- Title and legend ---
         font.setPointSize(10)
         font.setBold(True)
         painter.setFont(font)
-        painter.drawText(QtCore.QPointF(margin, 20), "Top View")
+        painter.setPen(QtGui.QColor(180, 180, 180))
+        painter.drawText(QtCore.QPointF(10, 16), "Top View")
 
+        font.setPointSize(8)
         font.setBold(False)
-        font.setPointSize(9)
         painter.setFont(font)
 
-        # Tool path legend
-        if tool_r > 0 and has_sides:
-            legend_x = w - margin - 160
-            painter.setPen(QtGui.QPen(QtGui.QColor(255, 200, 50, 180), 2, QtCore.Qt.DashLine))
-            painter.drawLine(QtCore.QPointF(legend_x, 14), QtCore.QPointF(legend_x + 20, 14))
+        # Legend (top right)
+        legend_x = w - 185
+        legend_y = 10
+        # Board
+        painter.setPen(QtGui.QPen(QtGui.QColor(140, 140, 160), 2))
+        painter.drawLine(QtCore.QPointF(legend_x, legend_y + 4),
+                         QtCore.QPointF(legend_x + 16, legend_y + 4))
+        painter.setPen(QtGui.QColor(180, 180, 180))
+        painter.drawText(QtCore.QPointF(legend_x + 20, legend_y + 8),
+                         "Board ({:.1f} x {:.1f})".format(self.board_x, self.board_y))
+
+        if has_sides:
+            legend_y += 14
+            painter.setPen(QtGui.QPen(QtGui.QColor(255, 200, 50, 150), 1.5, QtCore.Qt.DashLine))
+            painter.drawLine(QtCore.QPointF(legend_x, legend_y + 4),
+                             QtCore.QPointF(legend_x + 16, legend_y + 4))
             painter.setPen(QtGui.QColor(255, 200, 50, 200))
-            painter.drawText(QtCore.QPointF(legend_x + 24, 18),
-                             "Tool path ({:.1f}mm dia)".format(self.tool_dia))
-
-        # Dimension labels - board (final) dimensions
-        dim_color = QtGui.QColor(180, 180, 180)
-        dim_font = painter.font()
-        dim_font.setPointSize(9)
-        painter.setFont(dim_font)
-
-        # X dimension (below everything)
-        painter.setPen(dim_color)
-        painter.drawText(QtCore.QPointF(tx(self.board_x / 2) - 25, ty(-tool_r) + 30),
-                         "{:.1f} mm".format(self.board_x))
-
-        # Y dimension (left of everything, rotated)
-        painter.save()
-        painter.translate(tx(-tool_r) - 22, ty(self.board_y / 2) + 18)
-        painter.rotate(-90)
-        painter.drawText(0, 0, "{:.1f} mm".format(self.board_y))
-        painter.restore()
-
-        # Tool path dimensions (outer, yellow)
-        if tool_r > 0 and has_sides:
-            tp_color = QtGui.QColor(255, 200, 50, 200)
-            painter.setPen(tp_color)
-            total_cut_x = self.board_x + self.tool_dia
-            total_cut_y = self.board_y + self.tool_dia
-
-            # Total X toolpath dimension (above everything)
-            painter.drawText(QtCore.QPointF(tx(self.board_x / 2) - 35, ty(self.board_y + tool_r) - 12),
-                             "{:.1f} mm total".format(total_cut_x))
-
-            # Total Y toolpath dimension (right of everything, rotated)
-            painter.save()
-            painter.translate(tx(self.board_x + tool_r) + 32, ty(self.board_y / 2) + 25)
-            painter.rotate(-90)
-            painter.drawText(0, 0, "{:.1f} mm total".format(total_cut_y))
-            painter.restore()
-
-            # Offset label (below board, right side)
-            painter.setPen(QtGui.QColor(255, 200, 50, 160))
-            dim_font.setPointSize(8)
-            painter.setFont(dim_font)
-            painter.drawText(QtCore.QPointF(tx(self.board_x / 2) + 30, ty(-tool_r) + 30),
-                             "(+{:.1f}mm offset)".format(tool_r))
-            dim_font.setPointSize(9)
-            painter.setFont(dim_font)
-
-        # Draw operation indicators
-        op_num = 1
-        arrow_len = 20
-
-        # Top surface - lines extend to tool offset edges
-        if "top" in self.ops:
-            painter.setPen(QtGui.QPen(QtGui.QColor(0, 255, 0), 2))
-            for i in range(5):
-                frac = (i + 1) / 6
-                y_line = ty(self.board_y * frac)
-                painter.drawLine(QtCore.QPointF(tx(self.board_x + tool_r), y_line),
-                                 QtCore.QPointF(tx(-tool_r), y_line))
-            painter.setPen(QtGui.QColor(0, 255, 0))
-            painter.drawText(QtCore.QPointF(tx(self.board_x / 2) - 20,
-                             ty(self.board_y / 2) + 5),
-                             "{} TOP".format(op_num))
-            op_num += 1
-
-        # +X end (end grain) - extends past corners
-        if "+x" in self.ops:
-            painter.setPen(QtGui.QPen(QtGui.QColor(255, 100, 100), 3))
-            x_pos = tx(self.board_x + tool_r)
-            painter.drawLine(QtCore.QPointF(x_pos, ty(self.board_y + tool_r)),
-                             QtCore.QPointF(x_pos, ty(-tool_r)))
-            painter.setPen(QtGui.QColor(255, 100, 100))
-            painter.drawText(QtCore.QPointF(x_pos + 4, ty(self.board_y * 0.75)),
-                             "{} +X".format(op_num))
-            op_num += 1
-
-        # -X end (end grain) - extends past corners
-        if "-x" in self.ops:
-            painter.setPen(QtGui.QPen(QtGui.QColor(255, 150, 50), 3))
-            x_pos = tx(-tool_r)
-            painter.drawLine(QtCore.QPointF(x_pos, ty(self.board_y + tool_r)),
-                             QtCore.QPointF(x_pos, ty(-tool_r)))
-            painter.setPen(QtGui.QColor(255, 150, 50))
-            painter.drawText(QtCore.QPointF(x_pos - 35, ty(self.board_y * 0.75)),
-                             "{} -X".format(op_num))
-            op_num += 1
-
-        # +Y side - extends past corners
-        if "+y" in self.ops:
-            painter.setPen(QtGui.QPen(QtGui.QColor(100, 150, 255), 3))
-            y_pos = ty(self.board_y + tool_r)
-            painter.drawLine(QtCore.QPointF(tx(-tool_r), y_pos),
-                             QtCore.QPointF(tx(self.board_x + tool_r), y_pos))
-            painter.setPen(QtGui.QColor(100, 150, 255))
-            painter.drawText(QtCore.QPointF(tx(self.board_x * 0.7), y_pos + 12),
-                             "{} +Y".format(op_num))
-            op_num += 1
-
-        # -Y side - extends past corners
-        if "-y" in self.ops:
-            painter.setPen(QtGui.QPen(QtGui.QColor(200, 100, 255), 3))
-            y_pos = ty(-tool_r)
-            painter.drawLine(QtCore.QPointF(tx(-tool_r), y_pos),
-                             QtCore.QPointF(tx(self.board_x + tool_r), y_pos))
-            painter.setPen(QtGui.QColor(200, 100, 255))
-            painter.drawText(QtCore.QPointF(tx(self.board_x * 0.7), y_pos - 4),
-                             "{} -Y".format(op_num))
-            op_num += 1
+            painter.drawText(QtCore.QPointF(legend_x + 20, legend_y + 8),
+                             "Tool path ({:.1f}mm dia, +/-{:.1f} offset)".format(
+                                 self.tool_dia, tool_r))
 
         # --- SIDE VIEW ---
         side_margin_l = 60
@@ -258,7 +336,7 @@ class BoardPreview(QtWidgets.QWidget):
         font.setPointSize(10)
         font.setBold(True)
         painter.setFont(font)
-        painter.drawText(QtCore.QPointF(margin, top_h + 16), "Side View")
+        painter.drawText(QtCore.QPointF(side_margin_l, top_h + 16), "Side View")
         font.setBold(False)
         font.setPointSize(9)
         painter.setFont(font)
