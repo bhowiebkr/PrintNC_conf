@@ -156,18 +156,13 @@ class BoardPreview(QtWidgets.QWidget):
         painter.setFont(font)
 
         op_num = 1
-        # Center label for surfacing
-        if "top" in self.ops:
-            painter.setPen(QtGui.QColor(0, 220, 0))
-            painter.drawText(QtCore.QRectF(tx(0), ty(self.board_y), actual_w, actual_h),
-                             QtCore.Qt.AlignCenter, "{}: Surface Top".format(op_num))
-            op_num += 1
 
         # Side operation labels along the edges (inside the board near each edge)
         font.setPointSize(8)
         font.setBold(False)
         painter.setFont(font)
 
+        # End grain first to avoid tearout on surfaced top
         if "+x" in self.ops:
             painter.setPen(QtGui.QColor(255, 100, 100))
             painter.save()
@@ -185,6 +180,20 @@ class BoardPreview(QtWidgets.QWidget):
             painter.drawText(0, 0, "{}: -X end".format(op_num))
             painter.restore()
             op_num += 1
+
+        # Surface top after end grain
+        font.setPointSize(9)
+        font.setBold(True)
+        painter.setFont(font)
+        if "top" in self.ops:
+            painter.setPen(QtGui.QColor(0, 220, 0))
+            painter.drawText(QtCore.QRectF(tx(0), ty(self.board_y), actual_w, actual_h),
+                             QtCore.Qt.AlignCenter, "{}: Surface Top".format(op_num))
+            op_num += 1
+
+        font.setPointSize(8)
+        font.setBold(False)
+        painter.setFont(font)
 
         if "+y" in self.ops:
             painter.setPen(QtGui.QColor(100, 150, 255))
@@ -502,17 +511,17 @@ class BoardSquaring(QtWidgets.QWidget):
         ops_layout = QtWidgets.QVBoxLayout(ops_group)
         ops_layout.setSpacing(4)
 
-        self.chk_top = QtWidgets.QCheckBox("1. Surface top")
-        self.chk_top.setChecked(True)
-        ops_layout.addWidget(self.chk_top)
-
-        self.chk_plus_x = QtWidgets.QCheckBox("2. Mill +X end (end grain)")
+        self.chk_plus_x = QtWidgets.QCheckBox("1. Mill +X end (end grain)")
         self.chk_plus_x.setChecked(True)
         ops_layout.addWidget(self.chk_plus_x)
 
-        self.chk_minus_x = QtWidgets.QCheckBox("3. Mill -X end (end grain)")
+        self.chk_minus_x = QtWidgets.QCheckBox("2. Mill -X end (end grain)")
         self.chk_minus_x.setChecked(True)
         ops_layout.addWidget(self.chk_minus_x)
+
+        self.chk_top = QtWidgets.QCheckBox("3. Surface top")
+        self.chk_top.setChecked(True)
+        ops_layout.addWidget(self.chk_top)
 
         self.chk_plus_y = QtWidgets.QCheckBox("4. Mill +Y side")
         self.chk_plus_y.setChecked(True)
@@ -627,12 +636,12 @@ class BoardSquaring(QtWidgets.QWidget):
 
     def _enabled_ops(self):
         ops = []
-        if self.chk_top.isChecked():
-            ops.append("top")
         if self.chk_plus_x.isChecked():
             ops.append("+x")
         if self.chk_minus_x.isChecked():
             ops.append("-x")
+        if self.chk_top.isChecked():
+            ops.append("top")
         if self.chk_plus_y.isChecked():
             ops.append("+y")
         if self.chk_minus_y.isChecked():
@@ -688,14 +697,18 @@ class BoardSquaring(QtWidgets.QWidget):
         lines.append("")
 
     def _gen_side_cut(self, lines, axis, position, cut_start, cut_end, board_z,
-                      depth_per_pass, feed, plunge_feed, safe_z, climb_positive):
-        """Mill one side. climb_positive=True means cut in + direction for climb."""
-        num_passes = math.ceil(board_z / depth_per_pass)
+                      depth_per_pass, feed, plunge_feed, safe_z, climb_positive,
+                      start_z=None):
+        """Mill one side. climb_positive=True means cut in + direction for climb.
+        start_z: if set, start cutting from this Z instead of board_z (for extra material)."""
+        if start_z is None:
+            start_z = board_z
+        num_passes = math.ceil(start_z / depth_per_pass)
 
         if axis == "X":
             # Cutting along Y at fixed X position
             for p in range(num_passes):
-                z_level = board_z - (p + 1) * depth_per_pass
+                z_level = start_z - (p + 1) * depth_per_pass
                 if z_level < 0:
                     z_level = 0
                 if climb_positive:
@@ -712,7 +725,7 @@ class BoardSquaring(QtWidgets.QWidget):
         else:
             # Cutting along X at fixed Y position
             for p in range(num_passes):
-                z_level = board_z - (p + 1) * depth_per_pass
+                z_level = start_z - (p + 1) * depth_per_pass
                 if z_level < 0:
                     z_level = 0
                 if climb_positive:
@@ -763,56 +776,58 @@ class BoardSquaring(QtWidgets.QWidget):
         lines.append("G4 P2 (wait for spindle)")
         lines.append("")
 
-        # 1. Surface top
+        tool_r = tool_dia / 2
+
+        # 1. +X end (end grain) - cut first to avoid tearout on surfaced top
+        #    Start 4mm higher to handle extra material on rough stock
+        #    Tool center at board_x + radius, climb = -Y
+        end_grain_start_z = board_z + 4
+        if "+x" in ops:
+            lines.append("(--- MILL +X END - end grain ---)")
+            self._gen_side_cut(lines, "X", board_x + tool_r,
+                               -tool_r, board_y + tool_r, board_z,
+                               depth_per_pass, feed, plunge_feed, safe_z, False,
+                               start_z=end_grain_start_z)
+            lines.append("G53 G0 Z-5 (safe retract between ops)")
+            lines.append("")
+
+        # 2. -X end (end grain) - cut first to avoid tearout on surfaced top
+        #    Tool center at 0 - radius, climb = +Y
+        if "-x" in ops:
+            lines.append("(--- MILL -X END - end grain ---)")
+            self._gen_side_cut(lines, "X", -tool_r,
+                               -tool_r, board_y + tool_r, board_z,
+                               depth_per_pass, feed, plunge_feed, safe_z, True,
+                               start_z=end_grain_start_z)
+            lines.append("G53 G0 Z-5 (safe retract between ops)")
+            lines.append("")
+
+        # 3. Surface top - after end grain so any tearout gets cleaned up
         if "top" in ops:
             self._gen_surfacing(lines, board_x, board_y, board_z, tool_dia,
                                 stepover, surface_depth, feed, safe_z)
             lines.append("G53 G0 Z-5 (safe retract between ops)")
             lines.append("")
 
-        tool_r = tool_dia / 2
-
-        # 2. +X end (end grain) - tool center at board_x + radius
-        #    Cutting along Y, extend past corners by tool_r
-        #    Tool outside at +X, board to left: climb = -Y
-        if "+x" in ops:
-            lines.append("(--- MILL +X END - end grain ---)")
-            self._gen_side_cut(lines, "X", board_x + tool_r,
-                               -tool_r, board_y + tool_r, board_z,
-                               depth_per_pass, feed, plunge_feed, safe_z, False)
-            lines.append("G53 G0 Z-5 (safe retract between ops)")
-            lines.append("")
-
-        # 3. -X end (end grain) - tool center at 0 - radius
-        #    Cutting along Y, extend past corners by tool_r
-        #    Tool outside at -X, board to right: climb = +Y
-        if "-x" in ops:
-            lines.append("(--- MILL -X END - end grain ---)")
-            self._gen_side_cut(lines, "X", -tool_r,
-                               -tool_r, board_y + tool_r, board_z,
-                               depth_per_pass, feed, plunge_feed, safe_z, True)
-            lines.append("G53 G0 Z-5 (safe retract between ops)")
-            lines.append("")
-
-        # 4. +Y side - tool center at board_y + radius
-        #    Cutting along X, extend past corners by tool_r
-        #    Tool outside at +Y, board below: climb = +X
+        # 4. +Y side - tool center at board_y + radius, climb = +X
+        #    Start 4mm higher to handle extra material on rough stock
+        side_start_z = board_z + 4
         if "+y" in ops:
             lines.append("(--- MILL +Y SIDE ---)")
             self._gen_side_cut(lines, "Y", board_y + tool_r,
                                -tool_r, board_x + tool_r, board_z,
-                               depth_per_pass, feed, plunge_feed, safe_z, True)
+                               depth_per_pass, feed, plunge_feed, safe_z, True,
+                               start_z=side_start_z)
             lines.append("G53 G0 Z-5 (safe retract between ops)")
             lines.append("")
 
-        # 5. -Y side - tool center at 0 - radius
-        #    Cutting along X, extend past corners by tool_r
-        #    Tool outside at -Y, board above: climb = -X
+        # 5. -Y side - tool center at 0 - radius, climb = -X
         if "-y" in ops:
             lines.append("(--- MILL -Y SIDE ---)")
             self._gen_side_cut(lines, "Y", -tool_r,
                                -tool_r, board_x + tool_r, board_z,
-                               depth_per_pass, feed, plunge_feed, safe_z, False)
+                               depth_per_pass, feed, plunge_feed, safe_z, False,
+                               start_z=side_start_z)
             lines.append("G53 G0 Z-5 (safe retract between ops)")
             lines.append("")
 
