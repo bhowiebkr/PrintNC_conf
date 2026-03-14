@@ -36,6 +36,7 @@ TAB_SETUP = 7
 TAB_SETTINGS = 8
 TAB_UTILS = 9
 TAB_SURFACING = 10
+TAB_LINECUT = 11
 
 class HandlerClass:
     def __init__(self, halcomp, widgets, paths):
@@ -120,6 +121,7 @@ class HandlerClass:
         self.init_probe()
         self.init_utils()
         self.init_surfacing()
+        self.init_linecut()
         self.w.stackedWidget_log.setCurrentIndex(0)
         self.w.stackedWidget_dro.setCurrentIndex(0)
         if self.probe is not None:
@@ -350,6 +352,11 @@ class HandlerClass:
         from surfacing import Surfacing
         self.surfacing = Surfacing()
         self.w.layout_surfacing.addWidget(self.surfacing)
+
+    def init_linecut(self):
+        from line_cutting import LineCutting
+        self.linecut = LineCutting()
+        self.w.layout_linecut.addWidget(self.linecut)
 
     def processed_focus_event__(self, receiver, event):
         if not self.w.chk_use_virtual.isChecked() or STATUS.is_auto_mode(): return
