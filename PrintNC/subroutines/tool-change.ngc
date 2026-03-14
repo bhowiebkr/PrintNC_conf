@@ -96,9 +96,6 @@ O105 IF [ #<_ToolDidFirst> EQ 0 ]
 
 O105 ENDIF
 
-G53 G1 F[#<_TravelFeed>] Z[#<_TravelZ>]
-G53 G1 F[#<_TravelFeed>] X[#<_ToolChangeX>] Y[#<_ToolChangeY>]  ( Moves to desired potion for manual tool change )
-
 M6                                             ( do the normal M6 stuff )
 M70                                            ( save current modal state )
 
