@@ -1,5 +1,6 @@
 import os
 import tempfile
+import math
 from PyQt5 import QtWidgets, QtCore, QtGui
 from qtvcp.core import Status, Action, Info
 
@@ -160,11 +161,11 @@ class Surfacing(QtWidgets.QWidget):
         self.input_y = make_input(100)
         params_layout.addRow("Y Width (mm):", self.input_y)
 
-        self.input_tool_dia = make_input(8)
+        self.input_tool_dia = make_input(6)
         params_layout.addRow("Tool Diameter (mm):", self.input_tool_dia)
 
-        self.input_stepover = make_input(5)
-        params_layout.addRow("Max Stepover (mm):", self.input_stepover)
+        self.input_stepover_pct = make_input(70)
+        params_layout.addRow("Stepover (% of tool):", self.input_stepover_pct)
 
         self.input_depth = make_input(0.5)
         params_layout.addRow("Cut Depth (mm):", self.input_depth)
@@ -224,7 +225,7 @@ class Surfacing(QtWidgets.QWidget):
         self.input_x.textChanged.connect(self._update_preview)
         self.input_y.textChanged.connect(self._update_preview)
         self.input_tool_dia.textChanged.connect(self._update_preview)
-        self.input_stepover.textChanged.connect(self._update_preview)
+        self.input_stepover_pct.textChanged.connect(self._update_preview)
         self.combo_direction.currentIndexChanged.connect(self._update_preview)
 
     def _get_float(self, widget, fallback=1.0):
@@ -238,19 +239,20 @@ class Surfacing(QtWidgets.QWidget):
         x_len = self._get_float(self.input_x)
         y_width = self._get_float(self.input_y)
         tool_dia = self._get_float(self.input_tool_dia)
-        max_stepover = self._get_float(self.input_stepover)
+        stepover_pct = self._get_float(self.input_stepover_pct, 70)
+        stepover = tool_dia * stepover_pct / 100.0
         along_x = self.combo_direction.currentIndex() == 0
 
         if along_x:
             padded_y = y_width + tool_dia * 2
-            num_cuts = int(-(-padded_y // max_stepover))
-            stepover = padded_y / num_cuts
+            num_cuts = math.ceil(padded_y / stepover)
+            actual_stepover = padded_y / num_cuts
         else:
             padded_x = x_len + tool_dia * 2
-            num_cuts = int(-(-padded_x // max_stepover))
-            stepover = padded_x / num_cuts
+            num_cuts = math.ceil(padded_x / stepover)
+            actual_stepover = padded_x / num_cuts
 
-        return num_cuts, stepover, along_x
+        return num_cuts, actual_stepover, along_x
 
     def _build_toolpath_segments(self):
         """Build list of (x0, y0, x1, y1, is_cut) for visualization."""
@@ -290,14 +292,15 @@ class Surfacing(QtWidgets.QWidget):
 
         padded = y_width + tool_dia * 2 if along_x else x_len + tool_dia * 2
         self.lbl_info.setText(
-            "Passes: {}  |  Actual stepover: {:.2f} mm  |  Padded {}: {:.1f} mm".format(
-                num_cuts, stepover, "Y" if along_x else "X", padded))
+            "Passes: {}  |  Stepover: {:.1f}mm ({:.0f}% of {:.0f}mm)  |  Padded {}: {:.1f} mm".format(
+                num_cuts, stepover, self._get_float(self.input_stepover_pct, 70),
+                tool_dia, "Y" if along_x else "X", padded))
 
     def _generate_gcode(self):
         x_len = self._get_float(self.input_x)
         y_width = self._get_float(self.input_y)
         tool_dia = self._get_float(self.input_tool_dia)
-        max_stepover = self._get_float(self.input_stepover)
+        stepover_pct = self._get_float(self.input_stepover_pct, 70)
         depth = self._get_float(self.input_depth, 0.5)
         safe_z = self._get_float(self.input_safe_z, 10)
         rpm = int(self._get_float(self.input_rpm, 22000))
@@ -307,8 +310,8 @@ class Surfacing(QtWidgets.QWidget):
         lines = []
         lines.append("%")
         lines.append("(Surfacing operation)")
-        lines.append("(X={:.1f} Y={:.1f} Tool Dia={:.1f} Stepover={:.2f})".format(
-            x_len, y_width, tool_dia, stepover))
+        lines.append("(X={:.1f} Y={:.1f} Tool Dia={:.1f} Stepover={:.1f}mm at {:.0f}%)".format(
+            x_len, y_width, tool_dia, stepover, stepover_pct))
         lines.append("(Depth={:.2f} RPM={} Feed={})".format(depth, rpm, feed))
         lines.append("")
         lines.append("G21 (metric)")

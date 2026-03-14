@@ -277,11 +277,11 @@ class BoardSquaring(QtWidgets.QWidget):
         tool_layout.setSpacing(8)
         tool_layout.setContentsMargins(12, 20, 12, 12)
 
-        self.input_tool_dia = make_input(8)
+        self.input_tool_dia = make_input(6)
         tool_layout.addRow("Tool Diameter (mm):", self.input_tool_dia)
 
-        self.input_stepover = make_input(5)
-        tool_layout.addRow("Surfacing Stepover (mm):", self.input_stepover)
+        self.input_stepover_pct = make_input(70)
+        tool_layout.addRow("Stepover (% of tool):", self.input_stepover_pct)
 
         self.input_depth_per_pass = make_input(1)
         tool_layout.addRow("Side Depth/Pass (mm):", self.input_depth_per_pass)
@@ -363,7 +363,7 @@ class BoardSquaring(QtWidgets.QWidget):
         self.btn_save.clicked.connect(self._save_gcode)
         self.btn_send.clicked.connect(self._send_to_linuxcnc)
         for w in [self.input_x, self.input_y, self.input_z,
-                  self.input_tool_dia, self.input_stepover,
+                  self.input_tool_dia, self.input_stepover_pct,
                   self.input_depth_per_pass]:
             w.textChanged.connect(self._update_preview)
         for chk in [self.chk_top, self.chk_plus_x, self.chk_minus_x,
@@ -402,14 +402,16 @@ class BoardSquaring(QtWidgets.QWidget):
 
         depth_per_pass = self._get_float(self.input_depth_per_pass, 1)
         side_passes = math.ceil(board_z / depth_per_pass)
-        tool_dia = self._get_float(self.input_tool_dia, 8)
-        stepover = self._get_float(self.input_stepover, 5)
-        padded_y = board_y + tool_dia * 2
+        tool_dia = self._get_float(self.input_tool_dia, 6)
+        stepover_pct = self._get_float(self.input_stepover_pct, 70)
+        stepover = tool_dia * stepover_pct / 100.0
+        padded_y = board_y + tool_dia  # tool_r on each side
         surface_passes = math.ceil(padded_y / stepover)
 
         info_parts = []
         if "top" in ops:
-            info_parts.append("Top: {} passes".format(surface_passes))
+            info_parts.append("Top: {} passes ({:.1f}mm stepover)".format(
+                surface_passes, stepover))
         side_count = len([o for o in ops if o != "top"])
         if side_count:
             info_parts.append("Sides: {} passes/side x {} sides".format(
@@ -418,17 +420,23 @@ class BoardSquaring(QtWidgets.QWidget):
 
     def _gen_surfacing(self, lines, board_x, board_y, board_z, tool_dia,
                        stepover, depth, feed, safe_z):
-        """Surface the top - same logic as surfacing tab."""
-        padded_y = board_y + tool_dia * 2
+        """Surface the top - offset by tool radius to cover full board area."""
+        tool_r = tool_dia / 2
+        # Extend beyond board edges by tool radius so cutter fully covers all edges
+        x_start = -tool_r
+        x_end = board_x + tool_r
+        y_start = -tool_r
+        y_end = board_y + tool_r
+        padded_y = y_end - y_start
         num_cuts = math.ceil(padded_y / stepover)
         actual_stepover = padded_y / num_cuts
 
         lines.append("(--- SURFACE TOP ---)")
         for i in range(num_cuts):
-            y_pos = i * actual_stepover
-            lines.append("G0 X{:.1f} Y{:.2f}".format(board_x, y_pos))
+            y_pos = y_start + i * actual_stepover
+            lines.append("G0 X{:.2f} Y{:.2f}".format(x_end, y_pos))
             lines.append("G1 Z{:.2f} F{}".format(board_z - depth, feed))
-            lines.append("G1 X0 F{}".format(feed))
+            lines.append("G1 X{:.2f} F{}".format(x_start, feed))
             lines.append("G0 Z{:.1f}".format(safe_z))
         lines.append("")
 
@@ -476,8 +484,9 @@ class BoardSquaring(QtWidgets.QWidget):
         board_x = self._get_float(self.input_x, 100)
         board_y = self._get_float(self.input_y, 74)
         board_z = self._get_float(self.input_z, 16.6)
-        tool_dia = self._get_float(self.input_tool_dia, 8)
-        stepover = self._get_float(self.input_stepover, 5)
+        tool_dia = self._get_float(self.input_tool_dia, 6)
+        stepover_pct = self._get_float(self.input_stepover_pct, 70)
+        stepover = tool_dia * stepover_pct / 100.0
         depth_per_pass = self._get_float(self.input_depth_per_pass, 1)
         surface_depth = self._get_float(self.input_surface_depth, 0.5)
         rpm = int(self._get_float(self.input_rpm, 22000))
@@ -492,8 +501,8 @@ class BoardSquaring(QtWidgets.QWidget):
         lines.append("(Board squaring operation)")
         lines.append("(Board: X={:.1f} Y={:.1f} Z={:.1f})".format(
             board_x, board_y, board_z))
-        lines.append("(Tool Dia={:.1f} Stepover={:.1f} Depth/Pass={:.1f})".format(
-            tool_dia, stepover, depth_per_pass))
+        lines.append("(Tool Dia={:.1f} Stepover={:.1f}mm at {:.0f}% Depth/Pass={:.1f})".format(
+            tool_dia, stepover, stepover_pct, depth_per_pass))
         lines.append("")
         lines.append("G21 (metric)")
         lines.append("G90 (absolute positioning)")
@@ -514,38 +523,40 @@ class BoardSquaring(QtWidgets.QWidget):
             lines.append("G53 G0 Z-5 (safe retract between ops)")
             lines.append("")
 
-        # 2. +X end (end grain) - cut along Y at X=board_x
+        tool_r = tool_dia / 2
+
+        # 2. +X end (end grain) - tool center at board_x + radius
         #    Tool outside at +X, board to left: climb = -Y
         if "+x" in ops:
             lines.append("(--- MILL +X END - end grain ---)")
-            self._gen_side_cut(lines, "X", board_x, board_y, board_z,
+            self._gen_side_cut(lines, "X", board_x + tool_r, board_y, board_z,
                                depth_per_pass, feed, plunge_feed, safe_z, False)
             lines.append("G53 G0 Z-5 (safe retract between ops)")
             lines.append("")
 
-        # 3. -X end (end grain) - cut along Y at X=0
+        # 3. -X end (end grain) - tool center at 0 - radius
         #    Tool outside at -X, board to right: climb = +Y
         if "-x" in ops:
             lines.append("(--- MILL -X END - end grain ---)")
-            self._gen_side_cut(lines, "X", 0, board_y, board_z,
+            self._gen_side_cut(lines, "X", -tool_r, board_y, board_z,
                                depth_per_pass, feed, plunge_feed, safe_z, True)
             lines.append("G53 G0 Z-5 (safe retract between ops)")
             lines.append("")
 
-        # 4. +Y side - cut along X at Y=board_y
+        # 4. +Y side - tool center at board_y + radius
         #    Tool outside at +Y, board below: climb = +X
         if "+y" in ops:
             lines.append("(--- MILL +Y SIDE ---)")
-            self._gen_side_cut(lines, "Y", board_y, board_x, board_z,
+            self._gen_side_cut(lines, "Y", board_y + tool_r, board_x, board_z,
                                depth_per_pass, feed, plunge_feed, safe_z, True)
             lines.append("G53 G0 Z-5 (safe retract between ops)")
             lines.append("")
 
-        # 5. -Y side - cut along X at Y=0
+        # 5. -Y side - tool center at 0 - radius
         #    Tool outside at -Y, board above: climb = -X
         if "-y" in ops:
             lines.append("(--- MILL -Y SIDE ---)")
-            self._gen_side_cut(lines, "Y", 0, board_x, board_z,
+            self._gen_side_cut(lines, "Y", -tool_r, board_x, board_z,
                                depth_per_pass, feed, plunge_feed, safe_z, False)
             lines.append("G53 G0 Z-5 (safe retract between ops)")
             lines.append("")
