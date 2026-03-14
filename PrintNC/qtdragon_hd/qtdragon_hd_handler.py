@@ -35,6 +35,7 @@ TAB_GCODES = 6
 TAB_SETUP = 7
 TAB_SETTINGS = 8
 TAB_UTILS = 9
+TAB_SURFACING = 10
 
 class HandlerClass:
     def __init__(self, halcomp, widgets, paths):
@@ -118,6 +119,7 @@ class HandlerClass:
         self.init_widgets()
         self.init_probe()
         self.init_utils()
+        self.init_surfacing()
         self.w.stackedWidget_log.setCurrentIndex(0)
         self.w.stackedWidget_dro.setCurrentIndex(0)
         if self.probe is not None:
@@ -343,6 +345,11 @@ class HandlerClass:
         from qtvcp.lib.gcode_utility.hole_circle import Hole_Circle
         self.hole_circle = Hole_Circle()
         self.w.layout_hole_circle.addWidget(self.hole_circle)
+
+    def init_surfacing(self):
+        from surfacing import Surfacing
+        self.surfacing = Surfacing()
+        self.w.layout_surfacing.addWidget(self.surfacing)
 
     def processed_focus_event__(self, receiver, event):
         if not self.w.chk_use_virtual.isChecked() or STATUS.is_auto_mode(): return
