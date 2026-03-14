@@ -10,3 +10,5 @@ PrintNC/PrintNC_DEBUG.ini
 PrintNC/PrintNC.BACKUP.ini
 PrintNC/4th axes example
 .claude/
+PrintNC/tool.tbl
+PrintNC/qtdragon.pref
