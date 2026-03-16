@@ -172,12 +172,6 @@ class Surfacing(QtWidgets.QWidget):
         self.input_stepover_pct = make_input(70)
         params_layout.addRow("Stepover (% of tool):", self.input_stepover_pct)
 
-        self.input_depth = make_input(0.5)
-        params_layout.addRow("Cut Depth (mm):", self.input_depth)
-
-        self.input_safe_z = make_input(10)
-        params_layout.addRow("Safe Z Height (mm):", self.input_safe_z)
-
         self.input_rpm = make_input(22000, int_val, "RPM")
         params_layout.addRow("Spindle Speed (RPM):", self.input_rpm)
 
@@ -227,7 +221,7 @@ class Surfacing(QtWidgets.QWidget):
         self.btn_save.clicked.connect(self._save_gcode)
         self.btn_send.clicked.connect(self._send_to_linuxcnc)
         for w in [self.input_x, self.input_y, self.input_tool_dia,
-                  self.input_stepover_pct, self.input_depth, self.input_safe_z,
+                  self.input_stepover_pct,
                   self.input_rpm, self.input_feed]:
             w.textChanged.connect(self._update_preview)
             w.textChanged.connect(self._save_params)
@@ -240,8 +234,6 @@ class Surfacing(QtWidgets.QWidget):
             'y': self.input_y,
             'tool_dia': self.input_tool_dia,
             'stepover_pct': self.input_stepover_pct,
-            'depth': self.input_depth,
-            'safe_z': self.input_safe_z,
             'rpm': self.input_rpm,
             'feed': self.input_feed,
         }
@@ -342,8 +334,6 @@ class Surfacing(QtWidgets.QWidget):
         y_width = self._get_float(self.input_y)
         tool_dia = self._get_float(self.input_tool_dia)
         stepover_pct = self._get_float(self.input_stepover_pct, 70)
-        depth = self._get_float(self.input_depth, 0.5)
-        safe_z = self._get_float(self.input_safe_z, 10)
         rpm = int(self._get_float(self.input_rpm, 22000))
         feed = int(self._get_float(self.input_feed, 6000))
         num_cuts, stepover, along_x = self._compute_passes()
@@ -353,7 +343,7 @@ class Surfacing(QtWidgets.QWidget):
         lines.append("(Surfacing operation)")
         lines.append("(X={:.1f} Y={:.1f} Tool Dia={:.1f} Stepover={:.1f}mm at {:.0f}%)".format(
             x_len, y_width, tool_dia, stepover, stepover_pct))
-        lines.append("(Depth={:.2f} RPM={} Feed={})".format(depth, rpm, feed))
+        lines.append("(Cut at Z=0 RPM={} Feed={})".format(rpm, feed))
         lines.append("")
         lines.append("G21 (metric)")
         lines.append("G90 (absolute positioning)")
@@ -373,9 +363,9 @@ class Surfacing(QtWidgets.QWidget):
             for i in range(num_cuts):
                 y_pos = i * stepover
                 lines.append("G0 X{:.1f} Y{:.2f}".format(x_len, y_pos))
-                lines.append("G1 Z-{:.2f} F{}".format(depth, feed))
+                lines.append("G1 Z0 F{}".format(feed))
                 lines.append("G1 X0 F{}".format(feed))
-                lines.append("G0 Z{:.1f}".format(safe_z))
+                lines.append("G53 G0 Z-5")
         else:
             lines.append("G0 X0 Y{:.1f} (rapid to start position)".format(y_width))
             lines.append("S{} M3 (start spindle)".format(rpm))
@@ -384,9 +374,9 @@ class Surfacing(QtWidgets.QWidget):
             for i in range(num_cuts):
                 x_pos = i * stepover
                 lines.append("G0 X{:.2f} Y{:.1f}".format(x_pos, y_width))
-                lines.append("G1 Z-{:.2f} F{}".format(depth, feed))
+                lines.append("G1 Z0 F{}".format(feed))
                 lines.append("G1 Y0 F{}".format(feed))
-                lines.append("G0 Z{:.1f}".format(safe_z))
+                lines.append("G53 G0 Z-5")
 
         lines.append("")
         lines.append("G53 G0 Z-5 (retract to safe machine Z)")
