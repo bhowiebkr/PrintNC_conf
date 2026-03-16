@@ -253,8 +253,13 @@ class Surfacing(QtWidgets.QWidget):
 
         self.combo_direction = QtWidgets.QComboBox()
         self.combo_direction.setMinimumHeight(30)
-        self.combo_direction.addItems(["Along X (conventional)", "Along Y"])
+        self.combo_direction.addItems(["Along X", "Along Y"])
         params_layout.addRow("Direction:", self.combo_direction)
+
+        self.combo_method = QtWidgets.QComboBox()
+        self.combo_method.setMinimumHeight(30)
+        self.combo_method.addItems(["Unidirectional", "Both edges inward"])
+        params_layout.addRow("Method:", self.combo_method)
 
         main_layout.addWidget(params_group, 1)
 
@@ -300,6 +305,8 @@ class Surfacing(QtWidgets.QWidget):
             w.textChanged.connect(self._save_params)
         self.combo_direction.currentIndexChanged.connect(self._update_preview)
         self.combo_direction.currentIndexChanged.connect(self._save_params)
+        self.combo_method.currentIndexChanged.connect(self._update_preview)
+        self.combo_method.currentIndexChanged.connect(self._save_params)
 
     def _param_widgets(self):
         return {
@@ -317,6 +324,7 @@ class Surfacing(QtWidgets.QWidget):
         for key, w in self._param_widgets().items():
             data[key] = w.text()
         data['direction'] = self.combo_direction.currentIndex()
+        data['method'] = self.combo_method.currentIndex()
         try:
             with open(SURFACING_CONF, 'w') as f:
                 json.dump(data, f, indent=2)
@@ -334,6 +342,8 @@ class Surfacing(QtWidgets.QWidget):
                 w.setText(str(data[key]))
         if 'direction' in data:
             self.combo_direction.setCurrentIndex(data['direction'])
+        if 'method' in data:
+            self.combo_method.setCurrentIndex(data['method'])
 
     def _get_float(self, widget, fallback=1.0):
         try:
@@ -349,43 +359,62 @@ class Surfacing(QtWidgets.QWidget):
         stepover_pct = self._get_float(self.input_stepover_pct, 70)
         stepover = tool_dia * stepover_pct / 100.0
         along_x = self.combo_direction.currentIndex() == 0
+        both_edges = self.combo_method.currentIndex() == 1
 
         if along_x:
-            padded_y = y_width + tool_dia * 2
-            num_cuts = math.ceil(padded_y / stepover)
-            actual_stepover = padded_y / num_cuts
+            num_cuts = math.ceil(y_width / stepover)
+            actual_stepover = y_width / num_cuts
         else:
-            padded_x = x_len + tool_dia * 2
-            num_cuts = math.ceil(padded_x / stepover)
-            actual_stepover = padded_x / num_cuts
+            num_cuts = math.ceil(x_len / stepover)
+            actual_stepover = x_len / num_cuts
 
-        return num_cuts, actual_stepover, along_x
+        return num_cuts, actual_stepover, along_x, both_edges
 
     def _build_toolpath_segments(self):
         """Build list of (x0, y0, x1, y1, is_cut) for visualization."""
         x_len = self._get_float(self.input_x)
         y_width = self._get_float(self.input_y)
         tool_dia = self._get_float(self.input_tool_dia)
-        num_cuts, stepover, along_x = self._compute_passes()
+        num_cuts, stepover, along_x, both_edges = self._compute_passes()
 
         segments = []
 
-        if along_x:
-            # All cuts from X_max to 0 (climb only), rapid back
+        if both_edges:
+            span = y_width if along_x else x_len
+            near_idx = 0
+            far_idx = 0
+            from_near = True
             for i in range(num_cuts):
-                y_pos = i * stepover
-                # Rapid to start of cut
-                segments.append((0, y_pos, x_len, y_pos, False))
-                # Cut from X_max to 0
-                segments.append((x_len, y_pos, 0, y_pos, True))
+                if from_near:
+                    pos = near_idx * stepover
+                    if along_x:
+                        segments.append((0, pos, x_len, pos, False))
+                        segments.append((x_len, pos, 0, pos, True))
+                    else:
+                        segments.append((pos, 0, pos, y_width, False))
+                        segments.append((pos, y_width, pos, 0, True))
+                    near_idx += 1
+                else:
+                    pos = span - far_idx * stepover
+                    if along_x:
+                        segments.append((x_len, pos, 0, pos, False))
+                        segments.append((0, pos, x_len, pos, True))
+                    else:
+                        segments.append((pos, y_width, pos, 0, False))
+                        segments.append((pos, 0, pos, y_width, True))
+                    far_idx += 1
+                from_near = not from_near
         else:
-            # All cuts from Y_max to 0 (climb only), rapid back
-            for i in range(num_cuts):
-                x_pos = i * stepover
-                # Rapid to start of cut
-                segments.append((x_pos, 0, x_pos, y_width, False))
-                # Cut from Y_max to 0
-                segments.append((x_pos, y_width, x_pos, 0, True))
+            if along_x:
+                for i in range(num_cuts):
+                    y_pos = i * stepover
+                    segments.append((0, y_pos, x_len, y_pos, False))
+                    segments.append((x_len, y_pos, 0, y_pos, True))
+            else:
+                for i in range(num_cuts):
+                    x_pos = i * stepover
+                    segments.append((x_pos, 0, x_pos, y_width, False))
+                    segments.append((x_pos, y_width, x_pos, 0, True))
 
         return segments
 
@@ -393,16 +422,16 @@ class Surfacing(QtWidgets.QWidget):
         x_len = self._get_float(self.input_x)
         y_width = self._get_float(self.input_y)
         tool_dia = self._get_float(self.input_tool_dia)
-        num_cuts, stepover, along_x = self._compute_passes()
+        num_cuts, stepover, along_x, both_edges = self._compute_passes()
         segments = self._build_toolpath_segments()
         self.toolpath_view.set_toolpath(segments, x_len, y_width, tool_dia,
                                         stepover, num_cuts, along_x)
 
-        padded = y_width + tool_dia * 2 if along_x else x_len + tool_dia * 2
+        method = "both edges inward" if both_edges else "unidirectional"
         self.lbl_info.setText(
-            "Passes: {}  |  Stepover: {:.1f}mm ({:.0f}% of {:.0f}mm)  |  Padded {}: {:.1f} mm".format(
+            "Passes: {}  |  Stepover: {:.1f}mm ({:.0f}% of {:.0f}mm)  |  {}".format(
                 num_cuts, stepover, self._get_float(self.input_stepover_pct, 70),
-                tool_dia, "Y" if along_x else "X", padded))
+                tool_dia, method))
 
     def _generate_gcode(self):
         x_len = self._get_float(self.input_x)
@@ -412,11 +441,12 @@ class Surfacing(QtWidgets.QWidget):
         safe_z = self._get_float(self.input_safe_z, 10)
         rpm = int(self._get_float(self.input_rpm, 22000))
         feed = int(self._get_float(self.input_feed, 6000))
-        num_cuts, stepover, along_x = self._compute_passes()
+        num_cuts, stepover, along_x, both_edges = self._compute_passes()
+        method_str = "both edges inward" if both_edges else "unidirectional"
 
         lines = []
         lines.append("%")
-        lines.append("(Surfacing operation)")
+        lines.append("(Surfacing operation - {})".format(method_str))
         lines.append("(X={:.1f} Y={:.1f} Tool Dia={:.1f} Stepover={:.1f}mm at {:.0f}%)".format(
             x_len, y_width, tool_dia, stepover, stepover_pct))
         lines.append("(Cut at Z=0 RPM={} Feed={})".format(rpm, feed))
@@ -431,28 +461,59 @@ class Surfacing(QtWidgets.QWidget):
         lines.append("G53 G0 Z-5 (retract to safe machine Z)")
         lines.append("")
 
+        def _gcode_pass(lines, along_x, x_len, y_width, pos, feed, safe_z, reverse):
+            """Generate G-code for a single surfacing pass.
+            reverse=False: climb from near edge, reverse=True: climb from far edge."""
+            if along_x:
+                if reverse:
+                    lines.append("G0 X0 Y{:.2f}".format(pos))
+                    lines.append("G1 Z0 F{}".format(feed))
+                    lines.append("G1 X{:.1f} F{}".format(x_len, feed))
+                else:
+                    lines.append("G0 X{:.1f} Y{:.2f}".format(x_len, pos))
+                    lines.append("G1 Z0 F{}".format(feed))
+                    lines.append("G1 X0 F{}".format(feed))
+            else:
+                if reverse:
+                    lines.append("G0 X{:.2f} Y0".format(pos))
+                    lines.append("G1 Z0 F{}".format(feed))
+                    lines.append("G1 Y{:.1f} F{}".format(y_width, feed))
+                else:
+                    lines.append("G0 X{:.2f} Y{:.1f}".format(pos, y_width))
+                    lines.append("G1 Z0 F{}".format(feed))
+                    lines.append("G1 Y0 F{}".format(feed))
+            lines.append("G0 Z{:.1f}".format(safe_z))
+
         if along_x:
             lines.append("G0 X{:.1f} Y0 (rapid to start position)".format(x_len))
-            lines.append("S{} M3 (start spindle)".format(rpm))
-            lines.append("G4 P2 (wait for spindle)")
-            lines.append("")
-            for i in range(num_cuts):
-                y_pos = i * stepover
-                lines.append("G0 X{:.1f} Y{:.2f}".format(x_len, y_pos))
-                lines.append("G1 Z0 F{}".format(feed))
-                lines.append("G1 X0 F{}".format(feed))
-                lines.append("G0 Z{:.1f}".format(safe_z))
         else:
             lines.append("G0 X0 Y{:.1f} (rapid to start position)".format(y_width))
-            lines.append("S{} M3 (start spindle)".format(rpm))
-            lines.append("G4 P2 (wait for spindle)")
-            lines.append("")
+        lines.append("S{} M3 (start spindle)".format(rpm))
+        lines.append("G4 P2 (wait for spindle)")
+        lines.append("")
+
+        if both_edges:
+            # Alternate: pass 1 from near edge, pass 2 from far edge, etc.
+            # Near edge works inward: Y=0, Y=stepover, Y=2*stepover...
+            # Far edge works inward: Y=max, Y=max-stepover, Y=max-2*stepover...
+            span = y_width if along_x else x_len
+            near_idx = 0
+            far_idx = 0
+            from_near = True
             for i in range(num_cuts):
-                x_pos = i * stepover
-                lines.append("G0 X{:.2f} Y{:.1f}".format(x_pos, y_width))
-                lines.append("G1 Z0 F{}".format(feed))
-                lines.append("G1 Y0 F{}".format(feed))
-                lines.append("G0 Z{:.1f}".format(safe_z))
+                if from_near:
+                    pos = near_idx * stepover
+                    _gcode_pass(lines, along_x, x_len, y_width, pos, feed, safe_z, False)
+                    near_idx += 1
+                else:
+                    pos = span - far_idx * stepover
+                    _gcode_pass(lines, along_x, x_len, y_width, pos, feed, safe_z, True)
+                    far_idx += 1
+                from_near = not from_near
+        else:
+            for i in range(num_cuts):
+                pos = i * stepover
+                _gcode_pass(lines, along_x, x_len, y_width, pos, feed, safe_z, False)
 
         lines.append("")
         lines.append("G53 G0 Z-5 (retract to safe machine Z)")
