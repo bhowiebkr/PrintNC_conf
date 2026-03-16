@@ -20,12 +20,19 @@ class ToolpathView(QtWidgets.QWidget):
         self.work_x = 0
         self.work_y = 0
         self.tool_dia = 0
+        self.stepover = 0
+        self.num_cuts = 0
+        self.along_x = True
 
-    def set_toolpath(self, toolpath, work_x, work_y, tool_dia):
+    def set_toolpath(self, toolpath, work_x, work_y, tool_dia,
+                     stepover=0, num_cuts=0, along_x=True):
         self.toolpath = toolpath
         self.work_x = work_x
         self.work_y = work_y
         self.tool_dia = tool_dia
+        self.stepover = stepover
+        self.num_cuts = num_cuts
+        self.along_x = along_x
         self.update()
 
     def paintEvent(self, event):
@@ -40,65 +47,78 @@ class ToolpathView(QtWidgets.QWidget):
 
         w = self.width()
         h = self.height()
-        margin = 40
 
-        draw_w = w - 2 * margin
-        draw_h = h - 2 * margin
+        # Reserve space for dimension lines
+        dim_space_l = 60   # left
+        dim_space_b = 50   # bottom
+        dim_space_t = 30   # top
+        dim_space_r = 40   # right
 
-        # Scale to fit, maintaining aspect ratio
+        draw_w = w - dim_space_l - dim_space_r
+        draw_h = h - dim_space_t - dim_space_b
+
+        # Scale to fit workpiece, maintaining aspect ratio
         scale_x = draw_w / self.work_x
         scale_y = draw_h / self.work_y
-        scale = min(scale_x, scale_y)
+        scale = min(scale_x, scale_y) * 0.9
 
-        # Center the drawing
         actual_w = self.work_x * scale
         actual_h = self.work_y * scale
-        offset_x = margin + (draw_w - actual_w) / 2
-        offset_y = margin + (draw_h - actual_h) / 2
+        offset_x = dim_space_l + (draw_w - actual_w) / 2
+        offset_y = dim_space_t + (draw_h - actual_h) / 2
 
         def tx(x):
             return offset_x + x * scale
 
         def ty(y):
-            # Flip Y so 0 is at bottom
             return offset_y + actual_h - y * scale
 
-        # Draw workpiece outline
-        pen = QtGui.QPen(QtGui.QColor(80, 80, 80), 2)
-        painter.setPen(pen)
+        # --- Dimension line helpers ---
+        def draw_dim_h(y_pos, x_start, x_end, label, color, tick_len=5):
+            painter.setPen(QtGui.QPen(color, 1))
+            painter.drawLine(QtCore.QPointF(x_start, y_pos),
+                             QtCore.QPointF(x_end, y_pos))
+            painter.drawLine(QtCore.QPointF(x_start, y_pos - tick_len),
+                             QtCore.QPointF(x_start, y_pos + tick_len))
+            painter.drawLine(QtCore.QPointF(x_end, y_pos - tick_len),
+                             QtCore.QPointF(x_end, y_pos + tick_len))
+            fm = painter.fontMetrics()
+            tw = fm.horizontalAdvance(label)
+            text_x = (x_start + x_end) / 2 - tw / 2
+            painter.drawText(QtCore.QPointF(text_x, y_pos - 4), label)
+
+        def draw_dim_v(x_pos, y_start, y_end, label, color, tick_len=5):
+            painter.setPen(QtGui.QPen(color, 1))
+            painter.drawLine(QtCore.QPointF(x_pos, y_start),
+                             QtCore.QPointF(x_pos, y_end))
+            painter.drawLine(QtCore.QPointF(x_pos - tick_len, y_start),
+                             QtCore.QPointF(x_pos + tick_len, y_start))
+            painter.drawLine(QtCore.QPointF(x_pos - tick_len, y_end),
+                             QtCore.QPointF(x_pos + tick_len, y_end))
+            painter.save()
+            fm = painter.fontMetrics()
+            tw = fm.horizontalAdvance(label)
+            text_y = (y_start + y_end) / 2 + tw / 2
+            painter.translate(x_pos - 5, text_y)
+            painter.rotate(-90)
+            painter.drawText(0, 0, label)
+            painter.restore()
+
+        # --- Draw workpiece outline ---
+        painter.setPen(QtGui.QPen(QtGui.QColor(140, 140, 160), 2))
+        painter.setBrush(QtGui.QColor(80, 70, 50, 180))
         painter.drawRect(QtCore.QRectF(tx(0), ty(self.work_y), actual_w, actual_h))
 
-        # Draw axis labels
-        painter.setPen(QtGui.QColor(120, 120, 120))
-        font = painter.font()
-        font.setPointSize(9)
-        painter.setFont(font)
-        painter.drawText(QtCore.QPointF(tx(self.work_x / 2) - 10, ty(0) + 18), "X: {:.0f}".format(self.work_x))
-        painter.save()
-        painter.translate(tx(0) - 8, ty(self.work_y / 2) + 10)
-        painter.rotate(-90)
-        painter.drawText(0, 0, "Y: {:.0f}".format(self.work_y))
-        painter.restore()
-
-        # Draw tool width indicator in legend area
+        # --- Draw toolpath segments ---
         tool_screen_w = self.tool_dia * scale
-        if tool_screen_w > 1:
-            painter.setPen(QtGui.QPen(QtGui.QColor(100, 200, 255, 80), 1))
-            painter.drawText(QtCore.QPointF(margin, h - 8),
-                             "Tool: {:.1f}mm".format(self.tool_dia))
-
-        # Draw rapid moves (thin grey dashed)
         pen_rapid = QtGui.QPen(QtGui.QColor(100, 100, 100, 120), 1, QtCore.Qt.DashLine)
 
-        # Draw cutting moves with tool width
         for (x0, y0, x1, y1, is_cut) in self.toolpath:
             if is_cut:
-                # Draw tool swath
                 if tool_screen_w > 2:
                     swath_color = QtGui.QColor(0, 180, 0, 40)
                     painter.setPen(QtCore.Qt.NoPen)
                     painter.setBrush(swath_color)
-                    # Determine swath rectangle based on direction
                     half_tool = self.tool_dia / 2
                     sx0 = min(tx(x0), tx(x1)) - half_tool * scale
                     sy0 = min(ty(y0), ty(y1)) - half_tool * scale
@@ -106,7 +126,6 @@ class ToolpathView(QtWidgets.QWidget):
                     sh = abs(ty(y1) - ty(y0)) + self.tool_dia * scale
                     painter.drawRect(QtCore.QRectF(sx0, sy0, sw, sh))
 
-                # Draw cut line
                 pen_cut = QtGui.QPen(QtGui.QColor(0, 255, 0), 2)
                 painter.setPen(pen_cut)
                 painter.setBrush(QtCore.Qt.NoBrush)
@@ -118,11 +137,62 @@ class ToolpathView(QtWidgets.QWidget):
                 painter.drawLine(QtCore.QPointF(tx(x0), ty(y0)),
                                  QtCore.QPointF(tx(x1), ty(y1)))
 
-        # Draw origin marker
+        # --- Origin marker ---
         painter.setPen(QtGui.QPen(QtGui.QColor(255, 50, 50), 2))
         ox, oy = tx(0), ty(0)
         painter.drawLine(QtCore.QPointF(ox - 8, oy), QtCore.QPointF(ox + 8, oy))
         painter.drawLine(QtCore.QPointF(ox, oy - 8), QtCore.QPointF(ox, oy + 8))
+
+        # --- Extension lines ---
+        ext_pen = QtGui.QPen(QtGui.QColor(80, 80, 80), 1, QtCore.Qt.DotLine)
+        painter.setPen(ext_pen)
+
+        board_bottom = ty(0)
+        dim_y = board_bottom + 20
+
+        painter.drawLine(QtCore.QPointF(tx(0), board_bottom + 2),
+                         QtCore.QPointF(tx(0), dim_y + 6))
+        painter.drawLine(QtCore.QPointF(tx(self.work_x), board_bottom + 2),
+                         QtCore.QPointF(tx(self.work_x), dim_y + 6))
+
+        board_left = tx(0)
+        dim_x = board_left - 20
+
+        painter.drawLine(QtCore.QPointF(board_left - 2, ty(0)),
+                         QtCore.QPointF(dim_x - 6, ty(0)))
+        painter.drawLine(QtCore.QPointF(board_left - 2, ty(self.work_y)),
+                         QtCore.QPointF(dim_x - 6, ty(self.work_y)))
+
+        # --- Dimension lines ---
+        font = painter.font()
+        font.setPointSize(9)
+        painter.setFont(font)
+        dim_color = QtGui.QColor(180, 180, 180)
+
+        draw_dim_h(dim_y, tx(0), tx(self.work_x),
+                   "{:.1f} mm".format(self.work_x), dim_color)
+        draw_dim_v(dim_x, ty(self.work_y), ty(0),
+                   "{:.1f} mm".format(self.work_y), dim_color)
+
+        # --- Legend (top-right) ---
+        font.setPointSize(8)
+        painter.setFont(font)
+        legend_x = w - dim_space_r - 5
+        legend_y = dim_space_t
+
+        painter.setPen(QtGui.QColor(0, 220, 0))
+        painter.drawText(QtCore.QRectF(0, legend_y, legend_x, 15),
+                         QtCore.Qt.AlignRight,
+                         "Tool: {:.1f}mm dia".format(self.tool_dia))
+        painter.setPen(QtGui.QColor(160, 160, 160))
+        painter.drawText(QtCore.QRectF(0, legend_y + 14, legend_x, 15),
+                         QtCore.Qt.AlignRight,
+                         "{} passes, {:.1f}mm stepover".format(
+                             self.num_cuts, self.stepover))
+        cut_dir = "along X" if self.along_x else "along Y"
+        painter.drawText(QtCore.QRectF(0, legend_y + 28, legend_x, 15),
+                         QtCore.Qt.AlignRight,
+                         "Climb cutting {}".format(cut_dir))
 
         painter.end()
 
@@ -321,7 +391,8 @@ class Surfacing(QtWidgets.QWidget):
         tool_dia = self._get_float(self.input_tool_dia)
         num_cuts, stepover, along_x = self._compute_passes()
         segments = self._build_toolpath_segments()
-        self.toolpath_view.set_toolpath(segments, x_len, y_width, tool_dia)
+        self.toolpath_view.set_toolpath(segments, x_len, y_width, tool_dia,
+                                        stepover, num_cuts, along_x)
 
         padded = y_width + tool_dia * 2 if along_x else x_len + tool_dia * 2
         self.lbl_info.setText(
