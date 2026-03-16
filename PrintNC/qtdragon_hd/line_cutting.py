@@ -170,6 +170,10 @@ class LineCutting(QtWidgets.QWidget):
         self.input_cut_length = make_input(100)
         params_layout.addRow("Cut Length (mm):", self.input_cut_length)
 
+        pos_val = QtGui.QDoubleValidator(-99999.0, 99999.0, 3)
+        self.input_cut_position = make_input(0, pos_val)
+        params_layout.addRow("Cut Position (mm):", self.input_cut_position)
+
         self.input_material_height = make_input(20)
         params_layout.addRow("Material Height (mm):", self.input_material_height)
 
@@ -232,7 +236,8 @@ class LineCutting(QtWidgets.QWidget):
     def _connect_signals(self):
         self.btn_save.clicked.connect(self._save_gcode)
         self.btn_send.clicked.connect(self._send_to_linuxcnc)
-        for w in [self.input_cut_length, self.input_material_height,
+        for w in [self.input_cut_length, self.input_cut_position,
+                  self.input_material_height,
                   self.input_depth_per_pass, self.input_rpm,
                   self.input_feed, self.input_plunge_feed]:
             w.textChanged.connect(self._update_preview)
@@ -243,6 +248,7 @@ class LineCutting(QtWidgets.QWidget):
     def _param_widgets(self):
         return {
             'cut_length': self.input_cut_length,
+            'cut_position': self.input_cut_position,
             'material_height': self.input_material_height,
             'depth_per_pass': self.input_depth_per_pass,
             'rpm': self.input_rpm,
@@ -301,6 +307,10 @@ class LineCutting(QtWidgets.QWidget):
 
     def _generate_gcode(self):
         cut_length = self._get_float(self.input_cut_length, 100)
+        try:
+            cut_pos = float(self.input_cut_position.text())
+        except ValueError:
+            cut_pos = 0
         material_height = self._get_float(self.input_material_height, 20)
         depth_per_pass = self._get_float(self.input_depth_per_pass, 1)
         rpm = int(self._get_float(self.input_rpm, 22000))
@@ -309,13 +319,14 @@ class LineCutting(QtWidgets.QWidget):
         along_x = self.radio_x.isChecked()
         num_passes = math.ceil(material_height / depth_per_pass)
 
-        axis = "X" if along_x else "Y"
+        cut_axis = "X" if along_x else "Y"
+        pos_axis = "Y" if along_x else "X"
 
         lines = []
         lines.append("%")
         lines.append("(Line cutting operation)")
-        lines.append("(Length={:.1f} Material Height={:.1f} Depth/Pass={:.1f})".format(
-            cut_length, material_height, depth_per_pass))
+        lines.append("(Length={:.1f} Position {}{:.1f} Material Height={:.1f} Depth/Pass={:.1f})".format(
+            cut_length, pos_axis, cut_pos, material_height, depth_per_pass))
         lines.append("(Passes={} RPM={} Feed={})".format(num_passes, rpm, feed))
         lines.append("")
         lines.append("G21 (metric)")
@@ -326,7 +337,8 @@ class LineCutting(QtWidgets.QWidget):
         lines.append("G17 (XY plane)")
         lines.append("")
         lines.append("G53 G0 Z-5 (retract to safe machine Z)")
-        lines.append("G0 {}{:.1f} (rapid to start)".format(axis, cut_length))
+        lines.append("G0 {}{:.1f} {}{:.1f} (rapid to start)".format(
+            cut_axis, cut_length, pos_axis, cut_pos))
         lines.append("S{} M3 (start spindle)".format(rpm))
         lines.append("G4 P2 (wait for spindle)")
         lines.append("")
@@ -337,9 +349,9 @@ class LineCutting(QtWidgets.QWidget):
                 z_level = 0
 
             lines.append("(Pass {} of {} - Z{:.2f})".format(p + 1, num_passes, z_level))
-            lines.append("G0 {}{:.1f}".format(axis, cut_length))
+            lines.append("G0 {}{:.1f}".format(cut_axis, cut_length))
             lines.append("G1 Z{:.2f} F{}".format(z_level, plunge_feed))
-            lines.append("G1 {}0 F{}".format(axis, feed))
+            lines.append("G1 {}0 F{}".format(cut_axis, feed))
             lines.append("G0 Z{:.1f}".format(material_height + 5))
 
         lines.append("")
