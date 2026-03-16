@@ -381,28 +381,60 @@ class Surfacing(QtWidgets.QWidget):
 
         if both_edges:
             span = y_width if along_x else x_len
-            near_idx = 0
-            far_idx = 0
+            half = span / 2
+            # Near edge: 0, stepover, 2*stepover... up to half
+            near_positions = []
+            pos = 0
+            while pos <= half + 0.001:
+                near_positions.append(pos)
+                pos += stepover
+            # Far edge: span, span-stepover... down to half
+            far_positions = []
+            pos = span
+            while pos >= half - 0.001:
+                far_positions.append(pos)
+                pos -= stepover
+            # Interleave: near, far, near, far...
+            ni = 0
+            fi = 0
             from_near = True
-            for i in range(num_cuts):
-                if from_near:
-                    pos = near_idx * stepover
+            while ni < len(near_positions) or fi < len(far_positions):
+                if from_near and ni < len(near_positions):
+                    p = near_positions[ni]
+                    ni += 1
                     if along_x:
-                        segments.append((0, pos, x_len, pos, False))
-                        segments.append((x_len, pos, 0, pos, True))
+                        segments.append((0, p, x_len, p, False))
+                        segments.append((x_len, p, 0, p, True))
                     else:
-                        segments.append((pos, 0, pos, y_width, False))
-                        segments.append((pos, y_width, pos, 0, True))
-                    near_idx += 1
+                        segments.append((p, 0, p, y_width, False))
+                        segments.append((p, y_width, p, 0, True))
+                elif not from_near and fi < len(far_positions):
+                    p = far_positions[fi]
+                    fi += 1
+                    if along_x:
+                        segments.append((x_len, p, 0, p, False))
+                        segments.append((0, p, x_len, p, True))
+                    else:
+                        segments.append((p, y_width, p, 0, False))
+                        segments.append((p, 0, p, y_width, True))
+                elif ni < len(near_positions):
+                    p = near_positions[ni]
+                    ni += 1
+                    if along_x:
+                        segments.append((0, p, x_len, p, False))
+                        segments.append((x_len, p, 0, p, True))
+                    else:
+                        segments.append((p, 0, p, y_width, False))
+                        segments.append((p, y_width, p, 0, True))
                 else:
-                    pos = span - far_idx * stepover
+                    p = far_positions[fi]
+                    fi += 1
                     if along_x:
-                        segments.append((x_len, pos, 0, pos, False))
-                        segments.append((0, pos, x_len, pos, True))
+                        segments.append((x_len, p, 0, p, False))
+                        segments.append((0, p, x_len, p, True))
                     else:
-                        segments.append((pos, y_width, pos, 0, False))
-                        segments.append((pos, 0, pos, y_width, True))
-                    far_idx += 1
+                        segments.append((p, y_width, p, 0, False))
+                        segments.append((p, 0, p, y_width, True))
                 from_near = not from_near
         else:
             if along_x:
@@ -493,22 +525,38 @@ class Surfacing(QtWidgets.QWidget):
         lines.append("")
 
         if both_edges:
-            # Alternate: pass 1 from near edge, pass 2 from far edge, etc.
-            # Near edge works inward: Y=0, Y=stepover, Y=2*stepover...
-            # Far edge works inward: Y=max, Y=max-stepover, Y=max-2*stepover...
             span = y_width if along_x else x_len
-            near_idx = 0
-            far_idx = 0
+            half = span / 2
+            near_positions = []
+            pos = 0
+            while pos <= half + 0.001:
+                near_positions.append(pos)
+                pos += stepover
+            far_positions = []
+            pos = span
+            while pos >= half - 0.001:
+                far_positions.append(pos)
+                pos -= stepover
+            ni = 0
+            fi = 0
             from_near = True
-            for i in range(num_cuts):
-                if from_near:
-                    pos = near_idx * stepover
-                    _gcode_pass(lines, along_x, x_len, y_width, pos, feed, safe_z, False)
-                    near_idx += 1
+            while ni < len(near_positions) or fi < len(far_positions):
+                if from_near and ni < len(near_positions):
+                    _gcode_pass(lines, along_x, x_len, y_width,
+                                near_positions[ni], feed, safe_z, False)
+                    ni += 1
+                elif not from_near and fi < len(far_positions):
+                    _gcode_pass(lines, along_x, x_len, y_width,
+                                far_positions[fi], feed, safe_z, True)
+                    fi += 1
+                elif ni < len(near_positions):
+                    _gcode_pass(lines, along_x, x_len, y_width,
+                                near_positions[ni], feed, safe_z, False)
+                    ni += 1
                 else:
-                    pos = span - far_idx * stepover
-                    _gcode_pass(lines, along_x, x_len, y_width, pos, feed, safe_z, True)
-                    far_idx += 1
+                    _gcode_pass(lines, along_x, x_len, y_width,
+                                far_positions[fi], feed, safe_z, True)
+                    fi += 1
                 from_near = not from_near
         else:
             for i in range(num_cuts):
