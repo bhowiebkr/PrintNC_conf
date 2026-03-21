@@ -68,8 +68,9 @@ class BoardPreview(QtWidgets.QWidget):
         total_w = total_x * scale
         total_h = total_y * scale
 
-        cx = dim_space + (draw_area_w - total_w) / 2 + (tool_r * scale if has_perim else 0)
-        cy = dim_space_t + (draw_area_h - total_h) / 2 + (tool_r * scale if has_perim else 0)
+        # Board origin (0,0) is at bottom-left, tool path extends to +X and +Y only
+        cx = dim_space + (draw_area_w - total_w) / 2
+        cy = dim_space_t + (draw_area_h - total_h) / 2 + (self.tool_dia * scale if has_perim else 0)
 
         def tx(x):
             return cx + x * scale
@@ -109,12 +110,12 @@ class BoardPreview(QtWidgets.QWidget):
 
         # --- Draw shapes ---
 
-        # Tool swath fill (outermost)
+        # Tool swath fill (outermost) - from origin to board + tool_dia
         if tool_r > 0 and has_perim:
             painter.setPen(QtCore.Qt.NoPen)
             painter.setBrush(QtGui.QColor(255, 200, 50, 20))
             painter.drawRect(QtCore.QRectF(
-                tx(-tool_r), ty(self.board_y + tool_r),
+                tx(0), ty(self.board_y + self.tool_dia),
                 total_w, total_h))
 
         # Tool center path - dashed yellow
@@ -122,7 +123,7 @@ class BoardPreview(QtWidgets.QWidget):
             painter.setPen(QtGui.QPen(QtGui.QColor(255, 200, 50, 150), 1.5, QtCore.Qt.DashLine))
             painter.setBrush(QtCore.Qt.NoBrush)
             painter.drawRect(QtCore.QRectF(
-                tx(-tool_r), ty(self.board_y + tool_r),
+                tx(0), ty(self.board_y + self.tool_dia),
                 total_w, total_h))
 
         # Board fill and outline
@@ -152,12 +153,13 @@ class BoardPreview(QtWidgets.QWidget):
             # Draw perimeter cut lines on tool path
             perim_color = QtGui.QColor(255, 130, 70)
             painter.setPen(QtGui.QPen(perim_color, 2))
-            # Draw all 4 sides of the tool path rectangle
+            # Draw all 4 sides of the tool path rectangle (0,0 to board+tool_dia)
+            td = self.tool_dia
             corners = [
-                (tx(-tool_r), ty(self.board_y + tool_r)),
-                (tx(self.board_x + tool_r), ty(self.board_y + tool_r)),
-                (tx(self.board_x + tool_r), ty(-tool_r)),
-                (tx(-tool_r), ty(-tool_r)),
+                (tx(0), ty(self.board_y + td)),
+                (tx(self.board_x + td), ty(self.board_y + td)),
+                (tx(self.board_x + td), ty(0)),
+                (tx(0), ty(0)),
             ]
             for i in range(4):
                 x1, y1 = corners[i]
@@ -207,10 +209,8 @@ class BoardPreview(QtWidgets.QWidget):
         painter.drawLine(QtCore.QPointF(tx(self.board_x), board_bottom + 2),
                          QtCore.QPointF(tx(self.board_x), dim_y_outer + 6))
         if has_perim:
-            painter.drawLine(QtCore.QPointF(tx(-tool_r), ty(-tool_r) + 2),
-                             QtCore.QPointF(tx(-tool_r), dim_y_outer + 6))
-            painter.drawLine(QtCore.QPointF(tx(self.board_x + tool_r), ty(-tool_r) + 2),
-                             QtCore.QPointF(tx(self.board_x + tool_r), dim_y_outer + 6))
+            painter.drawLine(QtCore.QPointF(tx(self.board_x + self.tool_dia), ty(0) + 2),
+                             QtCore.QPointF(tx(self.board_x + self.tool_dia), dim_y_outer + 6))
 
         board_left = tx(0)
         dim_x_inner = board_left - 18
@@ -221,10 +221,8 @@ class BoardPreview(QtWidgets.QWidget):
         painter.drawLine(QtCore.QPointF(board_left - 2, ty(self.board_y)),
                          QtCore.QPointF(dim_x_outer - 6, ty(self.board_y)))
         if has_perim:
-            painter.drawLine(QtCore.QPointF(tx(-tool_r) - 2, ty(-tool_r)),
-                             QtCore.QPointF(dim_x_outer - 6, ty(-tool_r)))
-            painter.drawLine(QtCore.QPointF(tx(-tool_r) - 2, ty(self.board_y + tool_r)),
-                             QtCore.QPointF(dim_x_outer - 6, ty(self.board_y + tool_r)))
+            painter.drawLine(QtCore.QPointF(board_left - 2, ty(self.board_y + self.tool_dia)),
+                             QtCore.QPointF(dim_x_outer - 6, ty(self.board_y + self.tool_dia)))
 
         # --- Dimension lines ---
         font.setPointSize(9)
@@ -233,16 +231,16 @@ class BoardPreview(QtWidgets.QWidget):
 
         dim_color = QtGui.QColor(180, 180, 180)
         draw_dim_h(dim_y_inner, tx(0), tx(self.board_x),
-                   "{:.1f}".format(self.board_x), dim_color)
+                   "{:.1f} (final)".format(self.board_x), dim_color)
         if has_perim:
             tp_color = QtGui.QColor(255, 200, 50, 200)
-            draw_dim_h(dim_y_outer, tx(-tool_r), tx(self.board_x + tool_r),
+            draw_dim_h(dim_y_outer, tx(0), tx(self.board_x + self.tool_dia),
                        "{:.1f} (cut path)".format(total_x), tp_color)
 
         draw_dim_v(dim_x_inner, ty(self.board_y), ty(0),
-                   "{:.1f}".format(self.board_y), dim_color)
+                   "{:.1f} (final)".format(self.board_y), dim_color)
         if has_perim:
-            draw_dim_v(dim_x_outer, ty(self.board_y + tool_r), ty(-tool_r),
+            draw_dim_v(dim_x_outer, ty(self.board_y + self.tool_dia), ty(0),
                        "{:.1f} (cut path)".format(total_y), tp_color)
 
         # --- Title and legend ---
@@ -600,7 +598,7 @@ class BoardSquaring(QtWidgets.QWidget):
         side_passes = math.ceil(start_z / depth_per_pass)
         stepover_pct = self._get_float(self.input_stepover_pct, 70)
         stepover = tool_dia * stepover_pct / 100.0
-        padded_y = board_y + tool_dia
+        padded_y = board_y + tool_dia  # 0 to board_y + tool_dia
         surface_passes = math.ceil(padded_y / stepover)
 
         info_parts = []
@@ -620,10 +618,12 @@ class BoardSquaring(QtWidgets.QWidget):
         start_z = board_z + 4  # extra material allowance
 
         # Cut positions (tool center path)
-        x_plus = board_x + tool_r     # +X side
-        x_minus = -tool_r             # -X side
-        y_plus = board_y + tool_r     # +Y side
-        y_minus = -tool_r             # -Y side
+        # Left/front edges at X=0, Y=0 (G54 origin) - no negative travel
+        # Right/back edges offset by full tool diameter for final dimensions
+        x_plus = board_x + tool_r * 2   # +X side (right)
+        x_minus = 0                     # -X side (left, on G54 origin)
+        y_plus = board_y + tool_r * 2   # +Y side (back)
+        y_minus = 0                     # -Y side (front, on G54 origin)
 
         num_passes = math.ceil(start_z / depth_per_pass)
 
@@ -664,10 +664,11 @@ class BoardSquaring(QtWidgets.QWidget):
         Alternating climb passes from near (Y=0) and far (Y=max) edges
         working toward the middle. Tool path extends beyond board by tool_r."""
         tool_r = tool_dia / 2
-        x_start = -tool_r
-        x_end = board_x + tool_r
-        y_start = -tool_r
-        y_end = board_y + tool_r
+        # Stay at X=0, Y=0 on left/front, extend by full tool dia on right/back
+        x_start = 0
+        x_end = board_x + tool_r * 2
+        y_start = 0
+        y_end = board_y + tool_r * 2
         span = y_end - y_start
         half = span / 2
 
