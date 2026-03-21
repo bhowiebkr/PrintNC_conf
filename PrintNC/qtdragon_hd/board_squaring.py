@@ -732,17 +732,24 @@ class BoardSquaring(QtWidgets.QWidget):
         half = span / 2
 
         # Build near and far position lists
+        # Both lists go past the midpoint to guarantee overlap
         near_positions = []
-        pos = 0
-        while pos <= half + 0.001:
-            near_positions.append(y_start + pos)
+        pos = y_start
+        mid = y_start + half
+        while pos <= mid + stepover:
+            near_positions.append(pos)
             pos += stepover
+            if pos > y_end:
+                break
 
         far_positions = []
-        pos = 0
-        while pos <= half + 0.001:
-            far_positions.append(y_end - pos)
-            pos += stepover
+        pos = y_end
+        mid_far = y_end - half
+        while pos >= mid_far - stepover:
+            far_positions.append(pos)
+            pos -= stepover
+            if pos < y_start:
+                break
 
         # Interleave: near, far, near, far...
         passes = []
