@@ -103,6 +103,9 @@ INI file sections:
 - Roughing surface pass: cuts at Z = board_z + 1mm (1mm above target, leaves 1mm).
 - Finishing surface pass: cuts at Z = board_z (the exact target height).
 - Example: Z height=16.6 → roughing at Z17.6, finishing at Z16.6.
+- NEVER add depth below the target Z. The finishing pass is AT the target, not below it.
+- Previous bug: finishing was coded as `board_z - (surface_depth + 1.0)` which cut 1mm BELOW the target, making the board 1mm too thin and wasting material. The correct logic is finishing = board_z (target), roughing = board_z + 1 (above target).
+- Always verify with real numbers: if Z height=16.6, finishing MUST be Z16.6, roughing MUST be Z17.6. If the math gives anything lower than the entered Z height for the finishing pass, THE CODE IS WRONG.
 
 ### G-code safety
 - Always use G1 (not G0) for plunge moves into material.
