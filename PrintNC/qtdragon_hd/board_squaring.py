@@ -645,17 +645,15 @@ class BoardSquaring(QtWidgets.QWidget):
 
     def _gen_perimeter(self, lines, board_x, board_y, board_z, tool_r,
                        depth_per_pass, feed, plunge_feed, safe_z,
-                       compensate_x=False, roughing_offset=0, label=None):
+                       compensate_x=False, roughing_offset=0, label=None,
+                       single_pass_at_z=None):
         """Mill all 4 sides of the board, one full loop per depth pass.
         Climb cutting with M3 CW = go around the perimeter clockwise
         when viewed from above: +X(down -Y), -Y(left -X), -X(up +Y), +Y(right +X).
         roughing_offset: extra outward offset (e.g. 0.2mm for roughing).
-        Positive = further out from board (leaves material)."""
-        start_z = board_z + 4  # extra material allowance
+        single_pass_at_z: if set, do one loop at this Z instead of multiple passes."""
 
         # Cut positions (tool center path)
-        # Left/front: at 0 for finishing, -roughing_offset for roughing
-        # Right/back: board + tool_dia for finishing, +roughing_offset for roughing
         if compensate_x:
             x_plus = board_x + tool_r * 2 + roughing_offset
         else:
@@ -664,22 +662,32 @@ class BoardSquaring(QtWidgets.QWidget):
         y_plus = board_y + tool_r * 2 + roughing_offset
         y_minus = -roughing_offset
 
-        num_passes = math.ceil(start_z / depth_per_pass)
+        if single_pass_at_z is not None:
+            z_levels = [single_pass_at_z]
+        else:
+            start_z = board_z + 4  # extra material allowance
+            num_passes = math.ceil(start_z / depth_per_pass)
+            z_levels = []
+            for p in range(num_passes):
+                z_level = start_z - (p + 1) * depth_per_pass
+                if z_level < 0:
+                    z_level = 0
+                z_levels.append(z_level)
 
         if label:
-            lines.append("(--- MILL PERIMETER {} - all 4 sides per depth pass ---)".format(label))
+            if single_pass_at_z is not None:
+                lines.append("(--- MILL PERIMETER {} - single pass at Z={:.2f} ---)".format(
+                    label, z_levels[0]))
+            else:
+                lines.append("(--- MILL PERIMETER {} - all 4 sides per depth pass ---)".format(label))
         else:
             lines.append("(--- MILL PERIMETER - all 4 sides per depth pass ---)")
         lines.append("(Climb cutting clockwise: +X, -Y, -X, +Y)")
         lines.append("")
 
-        for p in range(num_passes):
-            z_level = start_z - (p + 1) * depth_per_pass
-            if z_level < 0:
-                z_level = 0
-
+        for i, z_level in enumerate(z_levels):
             lines.append("(--- Pass {} of {}, Z={:.2f} ---)".format(
-                p + 1, num_passes, z_level))
+                i + 1, len(z_levels), z_level))
 
             # Start at top-right corner (+X, +Y)
             lines.append("G0 X{:.2f} Y{:.2f}".format(x_plus, y_plus))
@@ -822,11 +830,11 @@ class BoardSquaring(QtWidgets.QWidget):
                                     label="ROUGHING")
                 lines.append("G53 G0 Z-5 (safe retract between passes)")
                 lines.append("")
-                # Finishing: exact final positions, full depth
+                # Finishing: exact final positions, single pass at Z=0
                 self._gen_perimeter(lines, board_x, board_y, board_z, tool_r,
                                     depth_per_pass, feed, plunge_feed, safe_z,
                                     compensate_x, roughing_offset=0,
-                                    label="FINISHING")
+                                    label="FINISHING", single_pass_at_z=0)
             else:
                 self._gen_perimeter(lines, board_x, board_y, board_z, tool_r,
                                     depth_per_pass, feed, plunge_feed, safe_z,
