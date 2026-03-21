@@ -692,10 +692,11 @@ class BoardSquaring(QtWidgets.QWidget):
             lines.append("G0 Z{:.1f}".format(safe_z))
             lines.append("")
 
-    def _gen_surfacing(self, lines, board_x, board_y, board_z, tool_dia,
-                       stepover, depth, feed, safe_z, compensate_x=False,
-                       label=None):
+    def _gen_surfacing_at_z(self, lines, board_x, board_y, cut_z, tool_dia,
+                           stepover, feed, safe_z, compensate_x=False,
+                           label=None):
         """Surface the top using both-edges-inward method.
+        cut_z is the exact Z height to cut at.
         Alternating climb passes from near (Y=0) and far (Y=max) edges
         working toward the middle. Tool path extends beyond board by tool_r."""
         tool_r = tool_dia / 2
@@ -742,8 +743,6 @@ class BoardSquaring(QtWidgets.QWidget):
                 passes.append((far_positions[fi], True))
                 fi += 1
             from_near = not from_near
-
-        cut_z = board_z - depth
 
         if label:
             lines.append("(--- SURFACE TOP {} - both edges inward, Z={:.2f} ---)".format(
@@ -814,20 +813,19 @@ class BoardSquaring(QtWidgets.QWidget):
         finishing = self.chk_finishing_pass.isChecked()
         if "top" in ops:
             if finishing:
-                # Roughing pass: remove most of surface_depth, leave 0.2mm for finishing
-                rough_depth = max(surface_depth - 0.2, surface_depth * 0.5)
-                self._gen_surfacing(lines, board_x, board_y, board_z, tool_dia,
-                                    stepover, rough_depth, feed, safe_z,
-                                    compensate_x, label="ROUGHING")
+                # Roughing pass: cut to board_z + 1 (1mm above final)
+                self._gen_surfacing_at_z(lines, board_x, board_y, board_z + 1.0,
+                                         tool_dia, stepover, feed, safe_z,
+                                         compensate_x, label="ROUGHING")
                 lines.append("")
-                # Finishing pass: cut to final target depth
-                self._gen_surfacing(lines, board_x, board_y, board_z, tool_dia,
-                                    stepover, surface_depth, feed, safe_z,
-                                    compensate_x, label="FINISHING")
+                # Finishing pass: cut to board_z (final dimension)
+                self._gen_surfacing_at_z(lines, board_x, board_y, board_z,
+                                         tool_dia, stepover, feed, safe_z,
+                                         compensate_x, label="FINISHING")
             else:
-                self._gen_surfacing(lines, board_x, board_y, board_z, tool_dia,
-                                    stepover, surface_depth, feed, safe_z,
-                                    compensate_x)
+                self._gen_surfacing_at_z(lines, board_x, board_y, board_z,
+                                         tool_dia, stepover, feed, safe_z,
+                                         compensate_x)
             lines.append("G53 G0 Z-5 (safe retract between ops)")
             lines.append("")
 
