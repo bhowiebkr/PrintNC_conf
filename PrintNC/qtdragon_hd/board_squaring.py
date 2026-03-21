@@ -20,7 +20,8 @@ class BoardPreview(QtWidgets.QWidget):
         self.board_y = 0
         self.board_z = 0
         self.tool_dia = 0
-        self.ops = []  # list of operation names that are enabled
+        self.ops = []
+        self.depth_per_pass = 1
 
     def set_params(self, board_x, board_y, board_z, ops, depth_per_pass=1, tool_dia=6):
         self.board_x = board_x
@@ -42,23 +43,21 @@ class BoardPreview(QtWidgets.QWidget):
         w = self.width()
         h = self.height()
 
-        # Split into top view (upper) and side view (lower)
         top_h = int(h * 0.6)
         side_h = h - top_h
 
         # --- TOP VIEW ---
-        # Reserve space for dimension lines outside the drawing
-        dim_space = 70   # space on left/bottom for dimension lines
-        dim_space_t = 35  # space on top
-        dim_space_r = 45  # space on right
+        dim_space = 70
+        dim_space_t = 35
+        dim_space_r = 45
 
         draw_area_w = w - dim_space - dim_space_r
         draw_area_h = top_h - dim_space_t - dim_space
 
         tool_r = self.tool_dia / 2
-        has_sides = any(op in self.ops for op in ["+x", "-x", "+y", "-y"])
-        total_x = self.board_x + (self.tool_dia if has_sides else 0)
-        total_y = self.board_y + (self.tool_dia if has_sides else 0)
+        has_perim = "perimeter" in self.ops
+        total_x = self.board_x + (self.tool_dia if has_perim else 0)
+        total_y = self.board_y + (self.tool_dia if has_perim else 0)
 
         scale_x = draw_area_w / total_x
         scale_y = draw_area_h / total_y
@@ -69,9 +68,8 @@ class BoardPreview(QtWidgets.QWidget):
         total_w = total_x * scale
         total_h = total_y * scale
 
-        # Center the total area in the drawing zone
-        cx = dim_space + (draw_area_w - total_w) / 2 + (tool_r * scale if has_sides else 0)
-        cy = dim_space_t + (draw_area_h - total_h) / 2 + (tool_r * scale if has_sides else 0)
+        cx = dim_space + (draw_area_w - total_w) / 2 + (tool_r * scale if has_perim else 0)
+        cy = dim_space_t + (draw_area_h - total_h) / 2 + (tool_r * scale if has_perim else 0)
 
         def tx(x):
             return cx + x * scale
@@ -79,34 +77,27 @@ class BoardPreview(QtWidgets.QWidget):
         def ty(y):
             return cy + actual_h - y * scale
 
-        # Helper to draw a dimension line with ticks and centered text
         def draw_dim_h(y_pos, x_start, x_end, label, color, tick_len=5):
-            """Horizontal dimension line at y_pos from x_start to x_end."""
             painter.setPen(QtGui.QPen(color, 1))
             painter.drawLine(QtCore.QPointF(x_start, y_pos),
                              QtCore.QPointF(x_end, y_pos))
-            # Ticks
             painter.drawLine(QtCore.QPointF(x_start, y_pos - tick_len),
                              QtCore.QPointF(x_start, y_pos + tick_len))
             painter.drawLine(QtCore.QPointF(x_end, y_pos - tick_len),
                              QtCore.QPointF(x_end, y_pos + tick_len))
-            # Text centered
             fm = painter.fontMetrics()
             tw = fm.horizontalAdvance(label)
             text_x = (x_start + x_end) / 2 - tw / 2
             painter.drawText(QtCore.QPointF(text_x, y_pos - 4), label)
 
         def draw_dim_v(x_pos, y_start, y_end, label, color, tick_len=5):
-            """Vertical dimension line at x_pos from y_start to y_end."""
             painter.setPen(QtGui.QPen(color, 1))
             painter.drawLine(QtCore.QPointF(x_pos, y_start),
                              QtCore.QPointF(x_pos, y_end))
-            # Ticks
             painter.drawLine(QtCore.QPointF(x_pos - tick_len, y_start),
                              QtCore.QPointF(x_pos + tick_len, y_start))
             painter.drawLine(QtCore.QPointF(x_pos - tick_len, y_end),
                              QtCore.QPointF(x_pos + tick_len, y_end))
-            # Text centered, rotated
             painter.save()
             fm = painter.fontMetrics()
             tw = fm.horizontalAdvance(label)
@@ -119,7 +110,7 @@ class BoardPreview(QtWidgets.QWidget):
         # --- Draw shapes ---
 
         # Tool swath fill (outermost)
-        if tool_r > 0 and has_sides:
+        if tool_r > 0 and has_perim:
             painter.setPen(QtCore.Qt.NoPen)
             painter.setBrush(QtGui.QColor(255, 200, 50, 20))
             painter.drawRect(QtCore.QRectF(
@@ -127,13 +118,12 @@ class BoardPreview(QtWidgets.QWidget):
                 total_w, total_h))
 
         # Tool center path - dashed yellow
-        if tool_r > 0 and has_sides:
+        if tool_r > 0 and has_perim:
             painter.setPen(QtGui.QPen(QtGui.QColor(255, 200, 50, 150), 1.5, QtCore.Qt.DashLine))
             painter.setBrush(QtCore.Qt.NoBrush)
             painter.drawRect(QtCore.QRectF(
                 tx(-tool_r), ty(self.board_y + tool_r),
-                (self.board_x + self.tool_dia) * scale,
-                (self.board_y + self.tool_dia) * scale))
+                total_w, total_h))
 
         # Board fill and outline
         painter.setPen(QtGui.QPen(QtGui.QColor(140, 140, 160), 2))
@@ -149,7 +139,7 @@ class BoardPreview(QtWidgets.QWidget):
                 painter.drawLine(QtCore.QPointF(tx(0) + 3, yl),
                                  QtCore.QPointF(tx(self.board_x) - 3, yl))
 
-        # --- Operation labels inside the board ---
+        # --- Operation labels ---
         font = painter.font()
         font.setPointSize(9)
         font.setBold(True)
@@ -157,95 +147,71 @@ class BoardPreview(QtWidgets.QWidget):
 
         op_num = 1
 
-        # Side operation labels along the edges (inside the board near each edge)
-        font.setPointSize(8)
-        font.setBold(False)
-        painter.setFont(font)
+        # Perimeter label
+        if has_perim:
+            # Draw perimeter cut lines on tool path
+            perim_color = QtGui.QColor(255, 130, 70)
+            painter.setPen(QtGui.QPen(perim_color, 2))
+            # Draw all 4 sides of the tool path rectangle
+            corners = [
+                (tx(-tool_r), ty(self.board_y + tool_r)),
+                (tx(self.board_x + tool_r), ty(self.board_y + tool_r)),
+                (tx(self.board_x + tool_r), ty(-tool_r)),
+                (tx(-tool_r), ty(-tool_r)),
+            ]
+            for i in range(4):
+                x1, y1 = corners[i]
+                x2, y2 = corners[(i + 1) % 4]
+                painter.drawLine(QtCore.QPointF(x1, y1), QtCore.QPointF(x2, y2))
 
-        # End grain first to avoid tearout on surfaced top
-        if "+x" in self.ops:
-            painter.setPen(QtGui.QColor(255, 100, 100))
-            painter.save()
-            painter.translate(tx(self.board_x) - 14, ty(self.board_y / 2) + 30)
-            painter.rotate(-90)
-            painter.drawText(0, 0, "{}: +X end".format(op_num))
-            painter.restore()
+            # Arrows showing cut direction (clockwise for climb with M3)
+            arrow_color = QtGui.QColor(255, 130, 70, 200)
+            painter.setPen(QtGui.QPen(arrow_color, 1.5))
+            # Small arrows at midpoints of each side
+            mid_points = []
+            for i in range(4):
+                x1, y1 = corners[i]
+                x2, y2 = corners[(i + 1) % 4]
+                mid_points.append(((x1 + x2) / 2, (y1 + y2) / 2))
+
+            painter.setPen(perim_color)
+            painter.drawText(QtCore.QRectF(tx(0), ty(self.board_y), actual_w, actual_h / 4),
+                             QtCore.Qt.AlignCenter,
+                             "{}: Perimeter".format(op_num))
             op_num += 1
 
-        if "-x" in self.ops:
-            painter.setPen(QtGui.QColor(255, 150, 50))
-            painter.save()
-            painter.translate(tx(0) + 12, ty(self.board_y / 2) + 25)
-            painter.rotate(-90)
-            painter.drawText(0, 0, "{}: -X end".format(op_num))
-            painter.restore()
-            op_num += 1
-
-        # Surface top after end grain
-        font.setPointSize(9)
-        font.setBold(True)
-        painter.setFont(font)
+        # Surface top label
         if "top" in self.ops:
             painter.setPen(QtGui.QColor(0, 220, 0))
-            painter.drawText(QtCore.QRectF(tx(0), ty(self.board_y), actual_w, actual_h),
-                             QtCore.Qt.AlignCenter, "{}: Surface Top".format(op_num))
+            painter.drawText(QtCore.QRectF(tx(0), ty(self.board_y) + actual_h * 0.3,
+                                           actual_w, actual_h / 3),
+                             QtCore.Qt.AlignCenter,
+                             "{}: Surface Top".format(op_num))
             op_num += 1
 
         font.setPointSize(8)
         font.setBold(False)
         painter.setFont(font)
 
-        if "+y" in self.ops:
-            painter.setPen(QtGui.QColor(100, 150, 255))
-            painter.drawText(QtCore.QPointF(tx(self.board_x / 2) - 20, ty(self.board_y) + 14),
-                             "{}: +Y side".format(op_num))
-            op_num += 1
-
-        if "-y" in self.ops:
-            painter.setPen(QtGui.QColor(200, 100, 255))
-            painter.drawText(QtCore.QPointF(tx(self.board_x / 2) - 20, ty(0) - 5),
-                             "{}: -Y side".format(op_num))
-            op_num += 1
-
-        # --- Side cut lines on the tool path ---
-        if "+x" in self.ops:
-            painter.setPen(QtGui.QPen(QtGui.QColor(255, 100, 100), 2))
-            painter.drawLine(QtCore.QPointF(tx(self.board_x + tool_r), ty(self.board_y + tool_r)),
-                             QtCore.QPointF(tx(self.board_x + tool_r), ty(-tool_r)))
-        if "-x" in self.ops:
-            painter.setPen(QtGui.QPen(QtGui.QColor(255, 150, 50), 2))
-            painter.drawLine(QtCore.QPointF(tx(-tool_r), ty(self.board_y + tool_r)),
-                             QtCore.QPointF(tx(-tool_r), ty(-tool_r)))
-        if "+y" in self.ops:
-            painter.setPen(QtGui.QPen(QtGui.QColor(100, 150, 255), 2))
-            painter.drawLine(QtCore.QPointF(tx(-tool_r), ty(self.board_y + tool_r)),
-                             QtCore.QPointF(tx(self.board_x + tool_r), ty(self.board_y + tool_r)))
-        if "-y" in self.ops:
-            painter.setPen(QtGui.QPen(QtGui.QColor(200, 100, 255), 2))
-            painter.drawLine(QtCore.QPointF(tx(-tool_r), ty(-tool_r)),
-                             QtCore.QPointF(tx(self.board_x + tool_r), ty(-tool_r)))
-
-        # --- Extension lines (thin lines from shape to dimension lines) ---
+        # --- Extension lines ---
         ext_color = QtGui.QColor(80, 80, 80)
         ext_pen = QtGui.QPen(ext_color, 1, QtCore.Qt.DotLine)
 
-        # Bottom extension lines (from board corners down)
         board_bottom = ty(0)
-        dim_y_inner = board_bottom + 18  # inner dimension line Y
-        dim_y_outer = board_bottom + 36  # outer dimension line Y
+        dim_y_inner = board_bottom + 18
+        dim_y_outer = board_bottom + 36
 
         painter.setPen(ext_pen)
         painter.drawLine(QtCore.QPointF(tx(0), board_bottom + 2),
                          QtCore.QPointF(tx(0), dim_y_outer + 6))
         painter.drawLine(QtCore.QPointF(tx(self.board_x), board_bottom + 2),
                          QtCore.QPointF(tx(self.board_x), dim_y_outer + 6))
-        if has_sides:
+        if has_perim:
             painter.drawLine(QtCore.QPointF(tx(-tool_r), ty(-tool_r) + 2),
                              QtCore.QPointF(tx(-tool_r), dim_y_outer + 6))
             painter.drawLine(QtCore.QPointF(tx(self.board_x + tool_r), ty(-tool_r) + 2),
                              QtCore.QPointF(tx(self.board_x + tool_r), dim_y_outer + 6))
 
-        # Left extension lines (from board corners left)
         board_left = tx(0)
         dim_x_inner = board_left - 18
         dim_x_outer = board_left - 36
@@ -254,7 +220,7 @@ class BoardPreview(QtWidgets.QWidget):
                          QtCore.QPointF(dim_x_outer - 6, ty(0)))
         painter.drawLine(QtCore.QPointF(board_left - 2, ty(self.board_y)),
                          QtCore.QPointF(dim_x_outer - 6, ty(self.board_y)))
-        if has_sides:
+        if has_perim:
             painter.drawLine(QtCore.QPointF(tx(-tool_r) - 2, ty(-tool_r)),
                              QtCore.QPointF(dim_x_outer - 6, ty(-tool_r)))
             painter.drawLine(QtCore.QPointF(tx(-tool_r) - 2, ty(self.board_y + tool_r)),
@@ -265,19 +231,17 @@ class BoardPreview(QtWidgets.QWidget):
         font.setBold(False)
         painter.setFont(font)
 
-        # Bottom: inner = board X, outer = total X
         dim_color = QtGui.QColor(180, 180, 180)
         draw_dim_h(dim_y_inner, tx(0), tx(self.board_x),
                    "{:.1f}".format(self.board_x), dim_color)
-        if has_sides:
+        if has_perim:
             tp_color = QtGui.QColor(255, 200, 50, 200)
             draw_dim_h(dim_y_outer, tx(-tool_r), tx(self.board_x + tool_r),
                        "{:.1f} (cut path)".format(total_x), tp_color)
 
-        # Left: inner = board Y, outer = total Y
         draw_dim_v(dim_x_inner, ty(self.board_y), ty(0),
                    "{:.1f}".format(self.board_y), dim_color)
-        if has_sides:
+        if has_perim:
             draw_dim_v(dim_x_outer, ty(self.board_y + tool_r), ty(-tool_r),
                        "{:.1f} (cut path)".format(total_y), tp_color)
 
@@ -292,10 +256,8 @@ class BoardPreview(QtWidgets.QWidget):
         font.setBold(False)
         painter.setFont(font)
 
-        # Legend (top right)
         legend_x = w - 185
         legend_y = 10
-        # Board
         painter.setPen(QtGui.QPen(QtGui.QColor(140, 140, 160), 2))
         painter.drawLine(QtCore.QPointF(legend_x, legend_y + 4),
                          QtCore.QPointF(legend_x + 16, legend_y + 4))
@@ -303,7 +265,7 @@ class BoardPreview(QtWidgets.QWidget):
         painter.drawText(QtCore.QPointF(legend_x + 20, legend_y + 8),
                          "Board ({:.1f} x {:.1f})".format(self.board_x, self.board_y))
 
-        if has_sides:
+        if has_perim:
             legend_y += 14
             painter.setPen(QtGui.QPen(QtGui.QColor(255, 200, 50, 150), 1.5, QtCore.Qt.DashLine))
             painter.drawLine(QtCore.QPointF(legend_x, legend_y + 4),
@@ -361,12 +323,12 @@ class BoardPreview(QtWidgets.QWidget):
         painter.setBrush(QtGui.QColor(80, 70, 50, 180))
         painter.drawRect(QtCore.QRectF(stx(0), stz(self.board_z), s_actual_w, s_actual_h))
 
-        # Draw depth pass lines for side cuts
-        has_sides = any(op in self.ops for op in ["+x", "-x", "+y", "-y"])
-        if has_sides and self.depth_per_pass > 0:
-            num_passes = math.ceil(self.board_z / self.depth_per_pass)
+        # Draw depth pass lines for perimeter cuts
+        if has_perim and self.depth_per_pass > 0:
+            start_z = self.board_z + 4  # extra material
+            num_passes = math.ceil(start_z / self.depth_per_pass)
             for p in range(num_passes):
-                z_level = self.board_z - (p + 1) * self.depth_per_pass
+                z_level = start_z - (p + 1) * self.depth_per_pass
                 if z_level < 0:
                     z_level = 0
                 alpha = 80 + int(175 * (p + 1) / num_passes)
@@ -376,18 +338,18 @@ class BoardPreview(QtWidgets.QWidget):
                 painter.drawLine(QtCore.QPointF(stx(0), y_line),
                                  QtCore.QPointF(stx(self.board_x), y_line))
 
-        # Z height label (left side)
+        # Z height label
         painter.setPen(QtGui.QColor(180, 180, 180))
         font.setPointSize(9)
         painter.setFont(font)
         painter.drawText(QtCore.QPointF(s_ox - 55, stz(self.board_z / 2) + 4),
                          "Z: {:.1f}".format(self.board_z))
 
-        # X length label (bottom)
+        # X length label
         painter.drawText(QtCore.QPointF(stx(self.board_x / 2) - 25, stz(0) + 28),
                          "X: {:.1f} mm".format(self.board_x))
 
-        # Z=0 and Z=top labels on left
+        # Z=0 and Z=top labels
         font.setPointSize(8)
         painter.setFont(font)
         painter.setPen(QtGui.QColor(120, 120, 120))
@@ -397,10 +359,7 @@ class BoardPreview(QtWidgets.QWidget):
 
         # Surface depth indicator
         if "top" in self.ops:
-            surf_z = self.board_z - self.depth_per_pass  # approximate with depth_per_pass
-            # Try to get actual surface_depth if available
             painter.setPen(QtGui.QPen(QtGui.QColor(0, 200, 0, 150), 1, QtCore.Qt.DashLine))
-            # Just show the top surface cut line
             surf_line_z = stz(self.board_z) + 3
             painter.drawLine(QtCore.QPointF(stx(0), surf_line_z),
                              QtCore.QPointF(stx(self.board_x), surf_line_z))
@@ -408,9 +367,10 @@ class BoardPreview(QtWidgets.QWidget):
             painter.drawText(QtCore.QPointF(stx(self.board_x) + 5, surf_line_z + 4),
                              "surface")
 
-        # Depth per pass and pass count labels (right side)
-        if has_sides and self.depth_per_pass > 0:
-            num_passes = math.ceil(self.board_z / self.depth_per_pass)
+        # Depth per pass and pass count labels
+        if has_perim and self.depth_per_pass > 0:
+            start_z = self.board_z + 4
+            num_passes = math.ceil(start_z / self.depth_per_pass)
             painter.setPen(QtGui.QColor(150, 200, 150))
             font.setPointSize(8)
             painter.setFont(font)
@@ -506,30 +466,18 @@ class BoardSquaring(QtWidgets.QWidget):
 
         left_layout.addWidget(tool_group)
 
-        # Operations to include
+        # Operations
         ops_group = QtWidgets.QGroupBox("Operations (in order)")
         ops_layout = QtWidgets.QVBoxLayout(ops_group)
         ops_layout.setSpacing(4)
 
-        self.chk_plus_x = QtWidgets.QCheckBox("1. Mill +X end (end grain)")
-        self.chk_plus_x.setChecked(True)
-        ops_layout.addWidget(self.chk_plus_x)
+        self.chk_perimeter = QtWidgets.QCheckBox("1. Mill perimeter (all 4 sides)")
+        self.chk_perimeter.setChecked(True)
+        ops_layout.addWidget(self.chk_perimeter)
 
-        self.chk_minus_x = QtWidgets.QCheckBox("2. Mill -X end (end grain)")
-        self.chk_minus_x.setChecked(True)
-        ops_layout.addWidget(self.chk_minus_x)
-
-        self.chk_top = QtWidgets.QCheckBox("3. Surface top")
+        self.chk_top = QtWidgets.QCheckBox("2. Surface top (both edges inward)")
         self.chk_top.setChecked(True)
         ops_layout.addWidget(self.chk_top)
-
-        self.chk_plus_y = QtWidgets.QCheckBox("4. Mill +Y side")
-        self.chk_plus_y.setChecked(True)
-        ops_layout.addWidget(self.chk_plus_y)
-
-        self.chk_minus_y = QtWidgets.QCheckBox("5. Mill -Y side")
-        self.chk_minus_y.setChecked(True)
-        ops_layout.addWidget(self.chk_minus_y)
 
         left_layout.addWidget(ops_group)
         left_layout.addStretch()
@@ -574,8 +522,7 @@ class BoardSquaring(QtWidgets.QWidget):
                   self.input_rpm, self.input_feed, self.input_plunge_feed]:
             w.textChanged.connect(self._update_preview)
             w.textChanged.connect(self._save_params)
-        for chk in [self.chk_top, self.chk_plus_x, self.chk_minus_x,
-                    self.chk_plus_y, self.chk_minus_y]:
+        for chk in [self.chk_perimeter, self.chk_top]:
             chk.toggled.connect(self._update_preview)
             chk.toggled.connect(self._save_params)
 
@@ -595,11 +542,8 @@ class BoardSquaring(QtWidgets.QWidget):
 
     def _checkbox_widgets(self):
         return {
+            'perimeter': self.chk_perimeter,
             'top': self.chk_top,
-            'plus_x': self.chk_plus_x,
-            'minus_x': self.chk_minus_x,
-            'plus_y': self.chk_plus_y,
-            'minus_y': self.chk_minus_y,
         }
 
     def _save_params(self):
@@ -636,16 +580,10 @@ class BoardSquaring(QtWidgets.QWidget):
 
     def _enabled_ops(self):
         ops = []
-        if self.chk_plus_x.isChecked():
-            ops.append("+x")
-        if self.chk_minus_x.isChecked():
-            ops.append("-x")
+        if self.chk_perimeter.isChecked():
+            ops.append("perimeter")
         if self.chk_top.isChecked():
             ops.append("top")
-        if self.chk_plus_y.isChecked():
-            ops.append("+y")
-        if self.chk_minus_y.isChecked():
-            ops.append("-y")
         return ops
 
     def _update_preview(self):
@@ -658,87 +596,130 @@ class BoardSquaring(QtWidgets.QWidget):
         tool_dia = self._get_float(self.input_tool_dia, 6)
         self.preview.set_params(board_x, board_y, board_z, ops, depth_per_pass, tool_dia)
 
-        side_passes = math.ceil(board_z / depth_per_pass)
+        start_z = board_z + 4
+        side_passes = math.ceil(start_z / depth_per_pass)
         stepover_pct = self._get_float(self.input_stepover_pct, 70)
         stepover = tool_dia * stepover_pct / 100.0
-        padded_y = board_y + tool_dia  # tool_r on each side
+        padded_y = board_y + tool_dia
         surface_passes = math.ceil(padded_y / stepover)
 
         info_parts = []
+        if "perimeter" in ops:
+            info_parts.append("Perimeter: {} depth passes x 4 sides".format(side_passes))
         if "top" in ops:
-            info_parts.append("Top: {} passes ({:.1f}mm stepover)".format(
+            info_parts.append("Top: {} passes ({:.1f}mm stepover, both edges inward)".format(
                 surface_passes, stepover))
-        side_count = len([o for o in ops if o != "top"])
-        if side_count:
-            info_parts.append("Sides: {} passes/side x {} sides".format(
-                side_passes, side_count))
         self.lbl_info.setText("  |  ".join(info_parts))
+
+    def _gen_perimeter(self, lines, board_x, board_y, board_z, tool_r,
+                       depth_per_pass, feed, plunge_feed, safe_z):
+        """Mill all 4 sides of the board, one full loop per depth pass.
+        Climb cutting with M3 CW = go around the perimeter clockwise
+        when viewed from above: +X(down -Y), -Y(left -X), -X(up +Y), +Y(right +X).
+        Tool center is offset by tool_r from board edge."""
+        start_z = board_z + 4  # extra material allowance
+
+        # Cut positions (tool center path)
+        x_plus = board_x + tool_r     # +X side
+        x_minus = -tool_r             # -X side
+        y_plus = board_y + tool_r     # +Y side
+        y_minus = -tool_r             # -Y side
+
+        num_passes = math.ceil(start_z / depth_per_pass)
+
+        lines.append("(--- MILL PERIMETER - all 4 sides per depth pass ---)")
+        lines.append("(Climb cutting clockwise: +X, -Y, -X, +Y)")
+        lines.append("")
+
+        for p in range(num_passes):
+            z_level = start_z - (p + 1) * depth_per_pass
+            if z_level < 0:
+                z_level = 0
+
+            lines.append("(--- Pass {} of {}, Z={:.2f} ---)".format(
+                p + 1, num_passes, z_level))
+
+            # Start at top-right corner (+X, +Y)
+            lines.append("G0 X{:.2f} Y{:.2f}".format(x_plus, y_plus))
+            lines.append("G1 Z{:.2f} F{}".format(z_level, plunge_feed))
+
+            # +X side: go down from +Y to -Y (climb with M3)
+            lines.append("G1 Y{:.2f} F{}".format(y_minus, feed))
+
+            # -Y side: go left from +X to -X
+            lines.append("G1 X{:.2f} F{}".format(x_minus, feed))
+
+            # -X side: go up from -Y to +Y
+            lines.append("G1 Y{:.2f} F{}".format(y_plus, feed))
+
+            # +Y side: go right from -X to +X (back to start)
+            lines.append("G1 X{:.2f} F{}".format(x_plus, feed))
+
+            lines.append("G0 Z{:.1f}".format(safe_z))
+            lines.append("")
 
     def _gen_surfacing(self, lines, board_x, board_y, board_z, tool_dia,
                        stepover, depth, feed, safe_z):
-        """Surface the top - offset by tool radius to cover full board area."""
+        """Surface the top using both-edges-inward method.
+        Alternating climb passes from near (Y=0) and far (Y=max) edges
+        working toward the middle. Tool path extends beyond board by tool_r."""
         tool_r = tool_dia / 2
-        # Extend beyond board edges by tool radius so cutter fully covers all edges
         x_start = -tool_r
         x_end = board_x + tool_r
         y_start = -tool_r
         y_end = board_y + tool_r
-        padded_y = y_end - y_start
-        num_cuts = math.ceil(padded_y / stepover)
-        actual_stepover = padded_y / num_cuts
+        span = y_end - y_start
+        half = span / 2
 
-        lines.append("(--- SURFACE TOP ---)")
-        for i in range(num_cuts):
-            y_pos = y_start + i * actual_stepover
-            lines.append("G0 X{:.2f} Y{:.2f}".format(x_end, y_pos))
-            lines.append("G1 Z{:.2f} F{}".format(board_z - depth, feed))
-            lines.append("G1 X{:.2f} F{}".format(x_start, feed))
+        # Build near and far position lists
+        near_positions = []
+        pos = 0
+        while pos <= half + 0.001:
+            near_positions.append(y_start + pos)
+            pos += stepover
+
+        far_positions = []
+        pos = 0
+        while pos <= half + 0.001:
+            far_positions.append(y_end - pos)
+            pos += stepover
+
+        # Interleave: near, far, near, far...
+        passes = []
+        ni = 0
+        fi = 0
+        from_near = True
+        while ni < len(near_positions) or fi < len(far_positions):
+            if from_near and ni < len(near_positions):
+                passes.append((near_positions[ni], False))  # False = climb from far end
+                ni += 1
+            elif not from_near and fi < len(far_positions):
+                passes.append((far_positions[fi], True))    # True = climb from near end
+                fi += 1
+            elif ni < len(near_positions):
+                passes.append((near_positions[ni], False))
+                ni += 1
+            else:
+                passes.append((far_positions[fi], True))
+                fi += 1
+            from_near = not from_near
+
+        cut_z = board_z - depth
+
+        lines.append("(--- SURFACE TOP - both edges inward ---)")
+        for y_pos, reverse in passes:
+            if reverse:
+                # Cut from x_start to x_end (climb from near edge)
+                lines.append("G0 X{:.2f} Y{:.2f}".format(x_start, y_pos))
+                lines.append("G1 Z{:.2f} F{}".format(cut_z, feed))
+                lines.append("G1 X{:.2f} F{}".format(x_end, feed))
+            else:
+                # Cut from x_end to x_start (climb from far edge)
+                lines.append("G0 X{:.2f} Y{:.2f}".format(x_end, y_pos))
+                lines.append("G1 Z{:.2f} F{}".format(cut_z, feed))
+                lines.append("G1 X{:.2f} F{}".format(x_start, feed))
             lines.append("G0 Z{:.1f}".format(safe_z))
         lines.append("")
-
-    def _gen_side_cut(self, lines, axis, position, cut_start, cut_end, board_z,
-                      depth_per_pass, feed, plunge_feed, safe_z, climb_positive,
-                      start_z=None):
-        """Mill one side. climb_positive=True means cut in + direction for climb.
-        start_z: if set, start cutting from this Z instead of board_z (for extra material)."""
-        if start_z is None:
-            start_z = board_z
-        num_passes = math.ceil(start_z / depth_per_pass)
-
-        if axis == "X":
-            # Cutting along Y at fixed X position
-            for p in range(num_passes):
-                z_level = start_z - (p + 1) * depth_per_pass
-                if z_level < 0:
-                    z_level = 0
-                if climb_positive:
-                    # Climb cut in +Y direction
-                    lines.append("G0 X{:.2f} Y{:.2f}".format(position, cut_start))
-                    lines.append("G1 Z{:.2f} F{}".format(z_level, plunge_feed))
-                    lines.append("G1 Y{:.2f} F{}".format(cut_end, feed))
-                else:
-                    # Climb cut in -Y direction
-                    lines.append("G0 X{:.2f} Y{:.2f}".format(position, cut_end))
-                    lines.append("G1 Z{:.2f} F{}".format(z_level, plunge_feed))
-                    lines.append("G1 Y{:.2f} F{}".format(cut_start, feed))
-                lines.append("G0 Z{:.1f}".format(safe_z))
-        else:
-            # Cutting along X at fixed Y position
-            for p in range(num_passes):
-                z_level = start_z - (p + 1) * depth_per_pass
-                if z_level < 0:
-                    z_level = 0
-                if climb_positive:
-                    # Climb cut in +X direction
-                    lines.append("G0 Y{:.2f} X{:.2f}".format(position, cut_start))
-                    lines.append("G1 Z{:.2f} F{}".format(z_level, plunge_feed))
-                    lines.append("G1 X{:.2f} F{}".format(cut_end, feed))
-                else:
-                    # Climb cut in -X direction
-                    lines.append("G0 Y{:.2f} X{:.2f}".format(position, cut_end))
-                    lines.append("G1 Z{:.2f} F{}".format(z_level, plunge_feed))
-                    lines.append("G1 X{:.2f} F{}".format(cut_start, feed))
-                lines.append("G0 Z{:.1f}".format(safe_z))
 
     def _generate_gcode(self):
         board_x = self._get_float(self.input_x, 100)
@@ -754,6 +735,7 @@ class BoardSquaring(QtWidgets.QWidget):
         plunge_feed = int(self._get_float(self.input_plunge_feed, 1000))
         ops = self._enabled_ops()
 
+        tool_r = tool_dia / 2
         safe_z = board_z + 5
 
         lines = []
@@ -776,58 +758,17 @@ class BoardSquaring(QtWidgets.QWidget):
         lines.append("G4 P2 (wait for spindle)")
         lines.append("")
 
-        tool_r = tool_dia / 2
-
-        # 1. +X end (end grain) - cut first to avoid tearout on surfaced top
-        #    Start 4mm higher to handle extra material on rough stock
-        #    Tool center at board_x + radius, climb = -Y
-        end_grain_start_z = board_z + 4
-        if "+x" in ops:
-            lines.append("(--- MILL +X END - end grain ---)")
-            self._gen_side_cut(lines, "X", board_x + tool_r,
-                               -tool_r, board_y + tool_r, board_z,
-                               depth_per_pass, feed, plunge_feed, safe_z, False,
-                               start_z=end_grain_start_z)
+        # 1. Perimeter - all 4 sides, one loop per depth pass
+        if "perimeter" in ops:
+            self._gen_perimeter(lines, board_x, board_y, board_z, tool_r,
+                                depth_per_pass, feed, plunge_feed, safe_z)
             lines.append("G53 G0 Z-5 (safe retract between ops)")
             lines.append("")
 
-        # 2. -X end (end grain) - cut first to avoid tearout on surfaced top
-        #    Tool center at 0 - radius, climb = +Y
-        if "-x" in ops:
-            lines.append("(--- MILL -X END - end grain ---)")
-            self._gen_side_cut(lines, "X", -tool_r,
-                               -tool_r, board_y + tool_r, board_z,
-                               depth_per_pass, feed, plunge_feed, safe_z, True,
-                               start_z=end_grain_start_z)
-            lines.append("G53 G0 Z-5 (safe retract between ops)")
-            lines.append("")
-
-        # 3. Surface top - after end grain so any tearout gets cleaned up
+        # 2. Surface top - both edges inward
         if "top" in ops:
             self._gen_surfacing(lines, board_x, board_y, board_z, tool_dia,
                                 stepover, surface_depth, feed, safe_z)
-            lines.append("G53 G0 Z-5 (safe retract between ops)")
-            lines.append("")
-
-        # 4. +Y side - tool center at board_y + radius, climb = +X
-        #    Start 4mm higher to handle extra material on rough stock
-        side_start_z = board_z + 4
-        if "+y" in ops:
-            lines.append("(--- MILL +Y SIDE ---)")
-            self._gen_side_cut(lines, "Y", board_y + tool_r,
-                               -tool_r, board_x + tool_r, board_z,
-                               depth_per_pass, feed, plunge_feed, safe_z, True,
-                               start_z=side_start_z)
-            lines.append("G53 G0 Z-5 (safe retract between ops)")
-            lines.append("")
-
-        # 5. -Y side - tool center at 0 - radius, climb = -X
-        if "-y" in ops:
-            lines.append("(--- MILL -Y SIDE ---)")
-            self._gen_side_cut(lines, "Y", -tool_r,
-                               -tool_r, board_x + tool_r, board_z,
-                               depth_per_pass, feed, plunge_feed, safe_z, False,
-                               start_z=side_start_z)
             lines.append("G53 G0 Z-5 (safe retract between ops)")
             lines.append("")
 
