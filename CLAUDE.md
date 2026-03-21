@@ -70,6 +70,33 @@ INI file sections:
 - `[SPINDLE_*]` - Spindle configuration
 - `[HAL]` - HAL file loading order
 
+## CRITICAL RULES
+
+### DO NOT touch code when the user is asking a question
+- If the user is asking a question, ONLY answer the question. Do not edit files. Do not commit.
+- "Tell me what's wrong", "what happened", "check this", "is this right" — these are questions. ONLY respond with text.
+- Only edit code when given explicit action instructions like "fix it", "change it", "do it", "commit".
+- This is a CNC machine. Bad code wastes expensive material and can damage the machine.
+- When in doubt whether the user wants an answer or an action, ASK. Do not assume.
+
+### Verify G-code math before committing
+- Always verify Z depths, offsets, and tool compensation math with actual numbers before committing.
+- Walk through the calculations with real values (e.g., board_z=16.6, surface_depth=0.5, tool_dia=6).
+- A finishing pass must cut to the TARGET depth, not deeper. Roughing leaves material, finishing removes it to target.
+- Never go negative on X or Y unless explicitly intended — G54 origin is at the workpiece corner.
+
+### G-code safety
+- Always use G1 (not G0) for plunge moves into material.
+- Use G53 Z-5 for safe machine-absolute travel between operations.
+- No nested parentheses in G-code comments — LinuxCNC parser will error.
+- Always include G90 (absolute positioning) at program start.
+- Add G4 P2 dwell after M3 spindle start.
+- Climb cutting only (with M3 CW spindle). Never alternate between climb and conventional.
+
+### LinuxCNC G-code format
+- Programs must start and end with `%` markers.
+- No nested parentheses in comments: use `(--- MILL +X END - end grain ---)` not `(--- MILL +X END (end grain) ---)`.
+
 ## Git Workflow
 
 - Main branch: `main`
