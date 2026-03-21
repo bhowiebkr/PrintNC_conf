@@ -82,8 +82,27 @@ INI file sections:
 ### Verify G-code math before committing
 - Always verify Z depths, offsets, and tool compensation math with actual numbers before committing.
 - Walk through the calculations with real values (e.g., board_z=16.6, surface_depth=0.5, tool_dia=6).
-- A finishing pass must cut to the TARGET depth, not deeper. Roughing leaves material, finishing removes it to target.
-- Never go negative on X or Y unless explicitly intended — G54 origin is at the workpiece corner.
+
+### Board squaring - perimeter cutting logic
+- G54 origin is at the front-left corner of the workpiece (X=0, Y=0).
+- The user enters X and Y as the final board dimensions. The tool center must be offset by tool_dia so the cutting edge lands on the board edge.
+- CNC cuts AWAY material from the OUTSIDE of the board. The tool path is a rectangle OUTSIDE the board.
+- Front/left sides: tool center at X=0, Y=0 for finishing (only goes negative for roughing allowance).
+- Back/right sides: tool center at board_dim + tool_dia for finishing.
+
+### Board squaring - roughing and finishing passes
+- Roughing: tool path is offset OUTWARD from the board by the roughing allowance (e.g., 0.2mm). This leaves extra material on the board because the tool cuts LESS into the board.
+- Finishing: tool path at final position, removes the last 0.2mm for a clean surface.
+- Example with 20x20mm board, 6mm tool (tool_r=3), 0.2mm roughing:
+  - Roughing: Left X=-0.2, Front Y=-0.2, Right X=20+6+0.2=26.2, Back Y=20+6+0.2=26.2
+  - Finishing: Left X=0, Front Y=0, Right X=20+6=26, Back Y=20+6=26
+- The ONLY negative travel allowed is the roughing allowance (e.g., -0.2mm). Never go more negative than that.
+
+### Board squaring - Z surfacing with finishing pass
+- Z Height is the FINAL desired board thickness. It is the target, not the stock height.
+- Roughing surface pass: cuts at Z = board_z + 1mm (1mm above target, leaves 1mm).
+- Finishing surface pass: cuts at Z = board_z (the exact target height).
+- Example: Z height=16.6 → roughing at Z17.6, finishing at Z16.6.
 
 ### G-code safety
 - Always use G1 (not G0) for plunge moves into material.
