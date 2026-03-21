@@ -497,6 +497,10 @@ class BoardSquaring(QtWidgets.QWidget):
         self.chk_compensate_x.setChecked(False)
         opts_layout.addWidget(self.chk_compensate_x)
 
+        self.chk_finishing_pass = QtWidgets.QCheckBox("Finishing pass on top surface")
+        self.chk_finishing_pass.setChecked(False)
+        opts_layout.addWidget(self.chk_finishing_pass)
+
         left_layout.addWidget(opts_group)
         left_layout.addStretch()
 
@@ -540,7 +544,8 @@ class BoardSquaring(QtWidgets.QWidget):
                   self.input_rpm, self.input_feed, self.input_plunge_feed]:
             w.textChanged.connect(self._update_preview)
             w.textChanged.connect(self._save_params)
-        for chk in [self.chk_perimeter, self.chk_top, self.chk_compensate_x]:
+        for chk in [self.chk_perimeter, self.chk_top, self.chk_compensate_x,
+                    self.chk_finishing_pass]:
             chk.toggled.connect(self._update_preview)
             chk.toggled.connect(self._save_params)
 
@@ -563,6 +568,7 @@ class BoardSquaring(QtWidgets.QWidget):
             'perimeter': self.chk_perimeter,
             'top': self.chk_top,
             'compensate_x': self.chk_compensate_x,
+            'finishing_pass': self.chk_finishing_pass,
         }
 
     def _save_params(self):
@@ -687,7 +693,8 @@ class BoardSquaring(QtWidgets.QWidget):
             lines.append("")
 
     def _gen_surfacing(self, lines, board_x, board_y, board_z, tool_dia,
-                       stepover, depth, feed, safe_z, compensate_x=False):
+                       stepover, depth, feed, safe_z, compensate_x=False,
+                       label=None):
         """Surface the top using both-edges-inward method.
         Alternating climb passes from near (Y=0) and far (Y=max) edges
         working toward the middle. Tool path extends beyond board by tool_r."""
@@ -738,7 +745,11 @@ class BoardSquaring(QtWidgets.QWidget):
 
         cut_z = board_z - depth
 
-        lines.append("(--- SURFACE TOP - both edges inward ---)")
+        if label:
+            lines.append("(--- SURFACE TOP {} - both edges inward, Z={:.2f} ---)".format(
+                label, cut_z))
+        else:
+            lines.append("(--- SURFACE TOP - both edges inward ---)")
         for y_pos, reverse in passes:
             if reverse:
                 # Cut from x_start to x_end (climb from near edge)
@@ -800,10 +811,24 @@ class BoardSquaring(QtWidgets.QWidget):
             lines.append("")
 
         # 2. Surface top - both edges inward
+        finishing = self.chk_finishing_pass.isChecked()
         if "top" in ops:
-            self._gen_surfacing(lines, board_x, board_y, board_z, tool_dia,
-                                stepover, surface_depth, feed, safe_z,
-                                compensate_x)
+            if finishing:
+                # Roughing pass: surface_depth - 1mm, leaving 1mm for finishing
+                rough_depth = surface_depth - 1.0
+                if rough_depth > 0:
+                    self._gen_surfacing(lines, board_x, board_y, board_z, tool_dia,
+                                        stepover, rough_depth, feed, safe_z,
+                                        compensate_x, label="ROUGHING")
+                    lines.append("")
+                # Finishing pass: full surface_depth at fine stepover
+                self._gen_surfacing(lines, board_x, board_y, board_z, tool_dia,
+                                    stepover, surface_depth, feed, safe_z,
+                                    compensate_x, label="FINISHING")
+            else:
+                self._gen_surfacing(lines, board_x, board_y, board_z, tool_dia,
+                                    stepover, surface_depth, feed, safe_z,
+                                    compensate_x)
             lines.append("G53 G0 Z-5 (safe retract between ops)")
             lines.append("")
 
