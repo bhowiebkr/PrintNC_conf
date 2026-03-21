@@ -814,15 +814,15 @@ class BoardSquaring(QtWidgets.QWidget):
         finishing = self.chk_finishing_pass.isChecked()
         if "top" in ops:
             if finishing:
-                # Roughing pass: remove surface_depth, leaving 1mm proud
+                # Roughing pass: remove most of surface_depth, leave 0.2mm for finishing
+                rough_depth = max(surface_depth - 0.2, surface_depth * 0.5)
                 self._gen_surfacing(lines, board_x, board_y, board_z, tool_dia,
-                                    stepover, surface_depth, feed, safe_z,
+                                    stepover, rough_depth, feed, safe_z,
                                     compensate_x, label="ROUGHING")
                 lines.append("")
-                # Finishing pass: take another 1mm to final height
-                finish_depth = surface_depth + 1.0
+                # Finishing pass: cut to final target depth
                 self._gen_surfacing(lines, board_x, board_y, board_z, tool_dia,
-                                    stepover, finish_depth, feed, safe_z,
+                                    stepover, surface_depth, feed, safe_z,
                                     compensate_x, label="FINISHING")
             else:
                 self._gen_surfacing(lines, board_x, board_y, board_z, tool_dia,
