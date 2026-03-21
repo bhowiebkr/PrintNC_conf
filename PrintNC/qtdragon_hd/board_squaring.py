@@ -474,6 +474,9 @@ class BoardSquaring(QtWidgets.QWidget):
         self.input_plunge_feed = make_input(1000, int_val)
         tool_layout.addRow("Plunge Feed (mm/min):", self.input_plunge_feed)
 
+        self.input_finish_feed_pct = make_input(50, int_val)
+        tool_layout.addRow("Finish Side Feed (%):", self.input_finish_feed_pct)
+
         left_layout.addWidget(tool_group)
 
         # Operations
@@ -544,7 +547,7 @@ class BoardSquaring(QtWidgets.QWidget):
         for w in [self.input_x, self.input_y, self.input_z,
                   self.input_tool_dia, self.input_stepover_pct,
                   self.input_depth_per_pass, self.input_rough_sides,
-                  self.input_rough_top,
+                  self.input_rough_top, self.input_finish_feed_pct,
                   self.input_rpm, self.input_feed, self.input_plunge_feed]:
             w.textChanged.connect(self._update_preview)
             w.textChanged.connect(self._save_params)
@@ -566,6 +569,7 @@ class BoardSquaring(QtWidgets.QWidget):
             'rpm': self.input_rpm,
             'feed': self.input_feed,
             'plunge_feed': self.input_plunge_feed,
+            'finish_feed_pct': self.input_finish_feed_pct,
         }
 
     def _checkbox_widgets(self):
@@ -830,9 +834,11 @@ class BoardSquaring(QtWidgets.QWidget):
                                     label="ROUGHING")
                 lines.append("G53 G0 Z-5 (safe retract between passes)")
                 lines.append("")
-                # Finishing: exact final positions, single pass at Z=0
+                # Finishing: exact final positions, single pass at Z=0, slower feed
+                finish_feed_pct = self._get_float(self.input_finish_feed_pct, 50)
+                finish_feed = int(feed * finish_feed_pct / 100.0)
                 self._gen_perimeter(lines, board_x, board_y, board_z, tool_r,
-                                    depth_per_pass, feed, plunge_feed, safe_z,
+                                    depth_per_pass, finish_feed, plunge_feed, safe_z,
                                     compensate_x, roughing_offset=0,
                                     label="FINISHING", single_pass_at_z=0)
             else:
