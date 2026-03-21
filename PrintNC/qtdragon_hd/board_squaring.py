@@ -459,8 +459,11 @@ class BoardSquaring(QtWidgets.QWidget):
         self.input_depth_per_pass = make_input(2)
         tool_layout.addRow("Side Depth/Pass (mm):", self.input_depth_per_pass)
 
-        self.input_surface_depth = make_input(0.5)
-        tool_layout.addRow("Surface Depth (mm):", self.input_surface_depth)
+        self.input_rough_sides = make_input(0.2)
+        tool_layout.addRow("Roughing Sides (mm):", self.input_rough_sides)
+
+        self.input_rough_top = make_input(1.0)
+        tool_layout.addRow("Roughing Top (mm):", self.input_rough_top)
 
         self.input_rpm = make_input(22000, int_val)
         tool_layout.addRow("Spindle Speed (RPM):", self.input_rpm)
@@ -540,7 +543,8 @@ class BoardSquaring(QtWidgets.QWidget):
         self.btn_send.clicked.connect(self._send_to_linuxcnc)
         for w in [self.input_x, self.input_y, self.input_z,
                   self.input_tool_dia, self.input_stepover_pct,
-                  self.input_depth_per_pass, self.input_surface_depth,
+                  self.input_depth_per_pass, self.input_rough_sides,
+                  self.input_rough_top,
                   self.input_rpm, self.input_feed, self.input_plunge_feed]:
             w.textChanged.connect(self._update_preview)
             w.textChanged.connect(self._save_params)
@@ -557,7 +561,8 @@ class BoardSquaring(QtWidgets.QWidget):
             'tool_dia': self.input_tool_dia,
             'stepover_pct': self.input_stepover_pct,
             'depth_per_pass': self.input_depth_per_pass,
-            'surface_depth': self.input_surface_depth,
+            'rough_sides': self.input_rough_sides,
+            'rough_top': self.input_rough_top,
             'rpm': self.input_rpm,
             'feed': self.input_feed,
             'plunge_feed': self.input_plunge_feed,
@@ -640,28 +645,31 @@ class BoardSquaring(QtWidgets.QWidget):
 
     def _gen_perimeter(self, lines, board_x, board_y, board_z, tool_r,
                        depth_per_pass, feed, plunge_feed, safe_z,
-                       compensate_x=False):
+                       compensate_x=False, roughing_offset=0, label=None):
         """Mill all 4 sides of the board, one full loop per depth pass.
         Climb cutting with M3 CW = go around the perimeter clockwise
         when viewed from above: +X(down -Y), -Y(left -X), -X(up +Y), +Y(right +X).
-        Tool center is offset by tool_r from board edge."""
+        roughing_offset: extra outward offset (e.g. 0.2mm for roughing).
+        Positive = further out from board (leaves material)."""
         start_z = board_z + 4  # extra material allowance
 
         # Cut positions (tool center path)
-        # Left/front edges at X=0, Y=0 (G54 origin) - no negative travel
-        # Right/back Y offset by full tool diameter for final width
-        # X: only offset if compensate_x is checked, otherwise use board_x as-is
+        # Left/front: at 0 for finishing, -roughing_offset for roughing
+        # Right/back: board + tool_dia for finishing, +roughing_offset for roughing
         if compensate_x:
-            x_plus = board_x + tool_r * 2   # +X side (right, compensated)
+            x_plus = board_x + tool_r * 2 + roughing_offset
         else:
-            x_plus = board_x                # +X side (right, as entered)
-        x_minus = 0                         # -X side (left, on G54 origin)
-        y_plus = board_y + tool_r * 2       # +Y side (back, compensated)
-        y_minus = 0                         # -Y side (front, on G54 origin)
+            x_plus = board_x + roughing_offset
+        x_minus = -roughing_offset
+        y_plus = board_y + tool_r * 2 + roughing_offset
+        y_minus = -roughing_offset
 
         num_passes = math.ceil(start_z / depth_per_pass)
 
-        lines.append("(--- MILL PERIMETER - all 4 sides per depth pass ---)")
+        if label:
+            lines.append("(--- MILL PERIMETER {} - all 4 sides per depth pass ---)".format(label))
+        else:
+            lines.append("(--- MILL PERIMETER - all 4 sides per depth pass ---)")
         lines.append("(Climb cutting clockwise: +X, -Y, -X, +Y)")
         lines.append("")
 
@@ -771,7 +779,8 @@ class BoardSquaring(QtWidgets.QWidget):
         stepover_pct = self._get_float(self.input_stepover_pct, 70)
         stepover = tool_dia * stepover_pct / 100.0
         depth_per_pass = self._get_float(self.input_depth_per_pass, 1)
-        surface_depth = self._get_float(self.input_surface_depth, 0.5)
+        rough_sides = self._get_float(self.input_rough_sides, 0.2)
+        rough_top = self._get_float(self.input_rough_top, 1.0)
         rpm = int(self._get_float(self.input_rpm, 22000))
         feed = int(self._get_float(self.input_feed, 6000))
         plunge_feed = int(self._get_float(self.input_plunge_feed, 1000))
@@ -801,20 +810,35 @@ class BoardSquaring(QtWidgets.QWidget):
         lines.append("G4 P2 (wait for spindle)")
         lines.append("")
 
+        finishing = self.chk_finishing_pass.isChecked()
+
         # 1. Perimeter - all 4 sides, one loop per depth pass
         if "perimeter" in ops:
-            self._gen_perimeter(lines, board_x, board_y, board_z, tool_r,
-                                depth_per_pass, feed, plunge_feed, safe_z,
-                                compensate_x)
+            if finishing:
+                # Roughing: outward offset, full depth
+                self._gen_perimeter(lines, board_x, board_y, board_z, tool_r,
+                                    depth_per_pass, feed, plunge_feed, safe_z,
+                                    compensate_x, roughing_offset=rough_sides,
+                                    label="ROUGHING")
+                lines.append("G53 G0 Z-5 (safe retract between passes)")
+                lines.append("")
+                # Finishing: exact final positions, full depth
+                self._gen_perimeter(lines, board_x, board_y, board_z, tool_r,
+                                    depth_per_pass, feed, plunge_feed, safe_z,
+                                    compensate_x, roughing_offset=0,
+                                    label="FINISHING")
+            else:
+                self._gen_perimeter(lines, board_x, board_y, board_z, tool_r,
+                                    depth_per_pass, feed, plunge_feed, safe_z,
+                                    compensate_x)
             lines.append("G53 G0 Z-5 (safe retract between ops)")
             lines.append("")
 
         # 2. Surface top - both edges inward
-        finishing = self.chk_finishing_pass.isChecked()
         if "top" in ops:
             if finishing:
-                # Roughing pass: cut to board_z + 1 (1mm above final)
-                self._gen_surfacing_at_z(lines, board_x, board_y, board_z + 1.0,
+                # Roughing pass: cut above final by rough_top allowance
+                self._gen_surfacing_at_z(lines, board_x, board_y, board_z + rough_top,
                                          tool_dia, stepover, feed, safe_z,
                                          compensate_x, label="ROUGHING")
                 lines.append("")
