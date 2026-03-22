@@ -650,7 +650,7 @@ class BoardSquaring(QtWidgets.QWidget):
     def _gen_perimeter(self, lines, board_x, board_y, board_z, tool_r,
                        depth_per_pass, feed, plunge_feed, safe_z,
                        compensate_x=False, roughing_offset=0, label=None,
-                       single_pass_at_z=None):
+                       single_pass_at_z=None, z_levels_override=None):
         """Mill all 4 sides of the board, one full loop per depth pass.
         Climb cutting with M3 CW = go around the perimeter clockwise
         when viewed from above: +X(down -Y), -Y(left -X), -X(up +Y), +Y(right +X).
@@ -666,7 +666,9 @@ class BoardSquaring(QtWidgets.QWidget):
         y_plus = board_y + tool_r * 2 + roughing_offset
         y_minus = -roughing_offset
 
-        if single_pass_at_z is not None:
+        if z_levels_override is not None:
+            z_levels = z_levels_override
+        elif single_pass_at_z is not None:
             z_levels = [single_pass_at_z]
         else:
             start_z = board_z + 4  # extra material allowance
@@ -841,13 +843,22 @@ class BoardSquaring(QtWidgets.QWidget):
                                     label="ROUGHING")
                 lines.append("G53 G0 Z-5 (safe retract between passes)")
                 lines.append("")
-                # Finishing: exact final positions, single pass at Z=0, slower feed
+                # Finishing: exact final positions, half-tool-dia depth passes, slower feed
                 finish_feed_pct = self._get_float(self.input_finish_feed_pct, 50)
                 finish_feed = int(feed * finish_feed_pct / 100.0)
+                finish_depth = tool_dia / 2  # half tool diameter
+                start_z = board_z + 4
+                finish_z_levels = []
+                z = start_z
+                while z > 0:
+                    z -= finish_depth
+                    if z < 0:
+                        z = 0
+                    finish_z_levels.append(z)
                 self._gen_perimeter(lines, board_x, board_y, board_z, tool_r,
                                     depth_per_pass, finish_feed, plunge_feed, safe_z,
                                     compensate_x, roughing_offset=0,
-                                    label="FINISHING", single_pass_at_z=0)
+                                    label="FINISHING", z_levels_override=finish_z_levels)
             else:
                 self._gen_perimeter(lines, board_x, board_y, board_z, tool_r,
                                     depth_per_pass, feed, plunge_feed, safe_z,
